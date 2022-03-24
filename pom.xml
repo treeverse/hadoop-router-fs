@@ -33,6 +33,13 @@
         <developerConnection>scm:git:ssh://git@github.com/treeverse/hadoop-router-fs.git</developerConnection>
     </scm>
 
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <!--The common Hadoop version for Spark 2.4.7 and 3.0.1, which lakeFS supports-->
+        <hadoop.version>2.7.7</hadoop.version><!--MARKER: keep this comment here, we update the version with the lakeFS version when on deploy-->
+    </properties>
+
     <profiles>
         <profile>
             <id>release</id>
@@ -151,19 +158,14 @@
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
-            <version>2.7.7</version> <!-- The common Hadoop version for Spark 2.4.7 and 3.0.1, which lakeFS supports -->
+            <version>${hadoop.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-common</artifactId>
             <scope>test</scope>
             <type>test-jar</type>
-            <version>2.7.7</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.hadoop</groupId>
-            <artifactId>hadoop-aws</artifactId>
-            <version>2.7.7</version>
+            <version>${hadoop.version}</version>
         </dependency>
 
 <!--        <dependency>        &lt;!&ndash; needed for aws-java-sdk in tests(!) &ndash;&gt;-->
@@ -223,11 +225,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-
-    <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
-    </properties>
-    
 </project>
