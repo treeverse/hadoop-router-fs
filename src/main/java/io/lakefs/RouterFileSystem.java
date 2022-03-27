@@ -154,7 +154,6 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
-        LOG.info("Reached RouterFS");
         return null;
     }
 }
