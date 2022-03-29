@@ -1,5 +1,6 @@
 package io.lakefs;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -10,17 +11,24 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
 
-
 public class RouterFileSystem extends FileSystem {
 
     public static final Logger LOG = LoggerFactory.getLogger(RouterFileSystem.class);
+
+    private PathMapper pathMapper;
 
     /**
      * Returns a URI whose scheme and authority identify this FileSystem.
      */
     @Override
     public URI getUri() {
+        //TODO (Tals): what should be the URI
         return null;
+    }
+
+    @Override
+    public void initialize(URI name, Configuration conf) throws IOException {
+        this.pathMapper = new PathMapper(conf);
     }
 
     /**
@@ -31,6 +39,10 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+        return null;
+    }
+
+    private Path translatePath(Path f) {
         return null;
     }
 
@@ -154,6 +166,10 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
+//        Path mappedPath = pathMapper.mapPath(f);
+//        Configuration conf = getConf();
+//        FileSystem fs = mappedPath.getFileSystem(conf);
+//        return fs.getFileStatus(mappedPath);
         return null;
     }
 }
