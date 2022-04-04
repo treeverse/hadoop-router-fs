@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
- * A class that does path mapping between configured pairs of path styles, and matches the appropriate path mapping for
+ * A class that does path mapping between configured pairs of path prefixes, and matches the appropriate path mapping for
  * a converted path.
  */
 public class PathMapper {
@@ -64,20 +64,20 @@ public class PathMapper {
      * @param mappingConfiguration the configurations to create path mapping from
      */
     private void populatePathMappings(List<MappingConfig> mappingConfiguration) {
-        List<MappingConfig> srcStyles = mappingConfiguration.stream()
+        List<MappingConfig> srcConfigs = mappingConfiguration.stream()
                 .filter(mc -> mc.getType() == MappingConfigType.REPLACE).collect(Collectors.toList());
 
-        for (MappingConfig srcStyle : srcStyles) {
-            Optional<MappingConfig> matchingDstStyle = mappingConfiguration.stream()
-                    .filter(mc -> mc.getToScheme().equals(srcStyle.getToScheme()) && mc.getIndex() == srcStyle.getIndex()
+        for (MappingConfig srcConf : srcConfigs) {
+            Optional<MappingConfig> matchingDstConf = mappingConfiguration.stream()
+                    .filter(mc -> mc.getToScheme().equals(srcConf.getToScheme()) && mc.getIndex() == srcConf.getIndex()
                             && mc.getType() == MappingConfigType.WITH).findFirst();
-            if (!matchingDstStyle.isPresent()) {
+            if (!matchingDstConf.isPresent()) {
                 LOG.warn("Missing a mapping configuration, expected to find mapping named %s.%d.%s.",
-                        srcStyle.getToScheme(), srcStyle.getIndex(), MappingConfigType.WITH.name());
+                        srcConf.getToScheme(), srcConf.getIndex(), MappingConfigType.WITH.name());
                 continue;
             }
-            PathMapping pathMapping = new PathMapping(srcStyle, matchingDstStyle.get());
-            if (srcStyle.isDefault()) {
+            PathMapping pathMapping = new PathMapping(srcConf, matchingDstConf.get());
+            if (srcConf.isDefault()) {
                 defaultMapping = pathMapping;
             } else {
                 pathMappings.add(pathMapping);
@@ -183,7 +183,7 @@ public class PathMapper {
     }
 
     /**
-     * Convert path by replacing its prefix with the new style prefix.
+     * Convert path by replacing its prefix with the dst prefix.
      *
      * @param path path to convert
      * @param pathMapping the path mapping that matches the path and according to which the path is converted
@@ -191,7 +191,7 @@ public class PathMapper {
      */
     private Path convertPath(Path path, PathMapping pathMapping) {
         String str = path.toString();
-        String convertedPath = str.replaceFirst(pathMapping.getSrcStyle().getValue(), pathMapping.getDstStyle().getValue());
+        String convertedPath = str.replaceFirst(pathMapping.getSrcPrefix().getValue(), pathMapping.getDstPrefix().getValue());
         LOG.trace("Converted % to % using path mapping %s", path, convertedPath,  pathMapping);
         return new Path(convertedPath);
     }
@@ -203,48 +203,49 @@ public class PathMapper {
     }
 
     /**
-     * PathMapping represents a pair of mapping configurations, that define source and destination path styles.
+     * PathMapping represents a pair of mapping configurations, that define source and destination prefixes to
+     * be replaced.
      */
     private static class PathMapping {
 
-        private MappingConfig srcStyle;
-        private MappingConfig dstStyle;
+        private MappingConfig srcPrefix;
+        private MappingConfig dstPrefix;
         private int index;
         private String toScheme;
 
-        public PathMapping(MappingConfig srcStyle, MappingConfig dstStyle) {
-            this.srcStyle = srcStyle;
-            this.dstStyle = dstStyle;
-            if (!srcStyle.getToScheme().equals(dstStyle.getToScheme())) {
+        public PathMapping(MappingConfig srcPrefix, MappingConfig dstPrefix) {
+            this.srcPrefix = srcPrefix;
+            this.dstPrefix = dstPrefix;
+            if (!srcPrefix.getToScheme().equals(dstPrefix.getToScheme())) {
                 LOG.error("src and dst schemes must match, cannot create PathMapping. src:"
-                        + srcStyle.getToScheme() + " dst: " + dstStyle.getToScheme());
+                        + srcPrefix.getToScheme() + " dst: " + dstPrefix.getToScheme());
             }
-            this.toScheme = srcStyle.getToScheme();
-            if (srcStyle.getIndex() != dstStyle.getIndex()) {
+            this.toScheme = srcPrefix.getToScheme();
+            if (srcPrefix.getIndex() != dstPrefix.getIndex()) {
                 LOG.error("src and dst indices must match, cannot create PathMapping. src:"
-                        + srcStyle.getIndex() + " dst: " + dstStyle.getIndex());
+                        + srcPrefix.getIndex() + " dst: " + dstPrefix.getIndex());
             }
-            this.index = srcStyle.getIndex();
+            this.index = srcPrefix.getIndex();
         }
 
         /**
          * Checks if this path mapping is appropriate for a {@link Path}.
-         * A path mapping considered appropriate for a path if the path starts with the path mapping's source style.
+         * A path mapping considered appropriate for a path if the path starts with the path mapping's source prefix.
          *
          * @param p the path to check whether a mapping is appropriate for
          * @return true if an appropriate, false otherwise
          */
         public boolean isAppropriateMapping(Path p) {
             String str = p.toString();
-            return str.startsWith(srcStyle.getValue());
+            return str.startsWith(srcPrefix.getValue());
         }
 
-        public MappingConfig getSrcStyle() {
-            return srcStyle;
+        public MappingConfig getSrcPrefix() {
+            return srcPrefix;
         }
 
-        public MappingConfig getDstStyle() {
-            return dstStyle;
+        public MappingConfig getDstPrefix() {
+            return dstPrefix;
         }
 
         public String getToScheme() {
@@ -257,7 +258,7 @@ public class PathMapper {
 
         @Override
         public String toString() {
-            return "srcStyle=" + this.srcStyle + " dstStyle=" + this.dstStyle;
+            return "srcPrefix=" + this.srcPrefix + " dstPrefix=" + this.dstPrefix;
         }
     }
 

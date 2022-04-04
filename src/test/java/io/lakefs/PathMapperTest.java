@@ -88,7 +88,7 @@ public class PathMapperTest {
                     put("s3a://bucket2/b.txt", "lakefs://example-repo/b1/b.txt");
                 }}, null},
 
-                {"src mapping style is a URI scheme",  new HashMap<String, String>() {{
+                {"src mapping prefix is a URI scheme",  new HashMap<String, String>() {{
                     put("routerfs.mapping.gcs.1.replace", "gcs://");
                     put("routerfs.mapping.gcs.1.with", "s3a://bucket1/");
                     put("routerfs.mapping.s3a-default.replace", "s3a://");
@@ -97,7 +97,7 @@ public class PathMapperTest {
                     put("gcs://a.txt" , "s3a://bucket1/a.txt");
                 }}, null},
 
-                {"dst mapping style is a URI scheme", new HashMap<String, String>() {{
+                {"dst mapping prefix is a URI scheme", new HashMap<String, String>() {{
                     put("routerfs.mapping.gcs.1.replace", "s3a://bucket/boo/");
                     put("routerfs.mapping.gcs.1.with", "gcs://");
                     put("routerfs.mapping.s3a-default.replace", "s3a://");
@@ -106,7 +106,7 @@ public class PathMapperTest {
                     put("s3a://bucket/boo/a.txt", "gcs://a.txt");
                 }}, null},
 
-                {"dst and src mapping styles are URI schemes", new HashMap<String, String>() {{
+                {"dst and src mapping prefixes are URI schemes", new HashMap<String, String>() {{
                     put("routerfs.mapping.gcs.1.replace", "minio://");
                     put("routerfs.mapping.gcs.1.with", "gcs://");
                     put("routerfs.mapping.s3a-default.replace", "s3a://");
