@@ -15,10 +15,7 @@ routerfs.mapping.lakefs.1.with=lakefs://example-repo/dev/ # mapping dst
 routerfs.mapping.lakefs.2.replace=s3a://bucket/prefix # mapping src
 routerfs.mapping.lakefs.2.with=lakefs://example-repo/dev/prefix # mapping dst
 ```
-If your mapping source prefix represents a directory, it should end with a "/" delimiter. This is especially important 
-if one of your mapping config values are URI scheme. e.g. when mapping src is `routerfs.mapping.gcs.1.replace=s3a://bucket` 
-and mapping dst is `routerfs.mapping.gcs.1.with=gcs://` and you are trying to route path `s3a://bucket/a.txt`, the result 
-would be `gcs:/a.txt` if you don't add the "/" delimiter to the mapping src. 
+Make sure your source prefix ends with a slash when needed. 
 
 #### Default mapping configuration
 

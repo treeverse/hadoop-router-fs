@@ -20,7 +20,7 @@ public class PathMapper {
     public static final Logger LOG = LoggerFactory.getLogger(PathMapper.class);
 
     protected static final String MAPPING_CONFIG_PREFIX = "routerfs.mapping.";
-    protected static final String NON_DEFAULT_MAPPING_CONFIG_PATTERN = "^routerfs\\.mapping\\.(.*)\\.(\\d*)\\.(replace|with)";
+    protected static final String NON_DEFAULT_MAPPING_CONFIG_PATTERN = "^routerfs\\.mapping\\.([a-z0-9-_]*)\\.(\\d*)\\.(replace|with)";
     protected static final String DEFAULT_MAPPING_CONFIG_PATTERN = "^routerfs\\.mapping\\.(.*default)\\.(replace|with)";
     protected static final int NON_DEFAULT_TO_FS_IDX = 1;
     protected static final int NON_DEFAULT_MAPPING_IDX_IDX = 2;
@@ -38,14 +38,14 @@ public class PathMapper {
 
     public PathMapper(Configuration conf) throws IOException {
         this.pathMappings = new ArrayList<>();
-        loadMappingConfiguration(conf);
+        loadMappingConfig(conf);
         if (defaultMapping == null) {
-            throw new MissingDefaultMappingProperty("Missing default mapping configuration, cannot initialize path mapper");
+            throw new IllegalArgumentException("Missing default mapping configuration, cannot initialize path mapper");
         }
     }
 
-    private void loadMappingConfiguration(Configuration conf) throws InvalidPropertiesFormatException {
-        List<MappingConfig> mappingConfiguration = loadMappingConfig(conf);
+    private void loadMappingConfig(Configuration conf) throws InvalidPropertiesFormatException {
+        List<MappingConfig> mappingConfiguration = parseMappingConfig(conf);
         populatePathMappings(mappingConfiguration);
 
         if (LOG.isDebugEnabled()) {
@@ -87,13 +87,13 @@ public class PathMapper {
     }
 
     /**
-     * Parses and loads {@link RouterFileSystem} mapping configuration.
+     * Parses {@link RouterFileSystem} mapping configuration.
      */
-    private List<MappingConfig> loadMappingConfig(Configuration conf) throws InvalidPropertiesFormatException {
+    private List<MappingConfig> parseMappingConfig(Configuration conf) throws InvalidPropertiesFormatException {
         List<MappingConfig> mappingConfig = new ArrayList<>();
         for (Map.Entry<String, String> hadoopConf : conf) {
             if (hadoopConf.getKey().startsWith(MAPPING_CONFIG_PREFIX)) {
-                MappingConfig mappingConf = parseConfName(hadoopConf);
+                MappingConfig mappingConf = parseConfKey(hadoopConf);
                 mappingConfig.add(mappingConf);
                 LOG.trace("Loaded and parsed mapping config with key:%s and value:%s", hadoopConf.getKey(), hadoopConf.getValue());
             }
@@ -129,22 +129,22 @@ public class PathMapper {
     }
 
     /**
-     * Parses hadoop configuration names of the following formats:
+     * Parses hadoop configuration keys of the following formats:
      * routerfs.mapping.${toFsScheme}.${mappingIdx}.{replace/with} and
      * routerfs.mapping.${defaultToFsScheme}.{replace/with} into a {@link MappingConfig}.
      *
      * @param hadoopConf the config to parse
      * @return parsed config
      */
-    private MappingConfig parseConfName(Map.Entry<String, String> hadoopConf) throws InvalidPropertiesFormatException {
+    private MappingConfig parseConfKey(Map.Entry<String, String> hadoopConf) throws InvalidPropertiesFormatException {
         String toFSScheme;
         int mappingIdx = 0;
         MappingConfigType type;
         boolean isDefaultMapping = false;
-        String name = hadoopConf.getKey();
+        String key = hadoopConf.getKey();
 
         Pattern mappingConfPattern = Pattern.compile(NON_DEFAULT_MAPPING_CONFIG_PATTERN);
-        Matcher nonDefaultMatcher = mappingConfPattern.matcher(name);
+        Matcher nonDefaultMatcher = mappingConfPattern.matcher(key);
         boolean nonDefaultMapping = nonDefaultMatcher.find();
         if (nonDefaultMapping) {
             toFSScheme = nonDefaultMatcher.group(NON_DEFAULT_TO_FS_IDX);
@@ -153,10 +153,10 @@ public class PathMapper {
                     MappingConfigType.WITH;
         } else {
             Pattern defaultPattern = Pattern.compile(DEFAULT_MAPPING_CONFIG_PATTERN);
-            Matcher defaultMatcher = defaultPattern.matcher(name);
+            Matcher defaultMatcher = defaultPattern.matcher(key);
             boolean defaultMapping = defaultMatcher.find();
             if (!defaultMapping) {
-                throw new InvalidPropertiesFormatException("Invalid mapping configuration name " + name);
+                throw new InvalidPropertiesFormatException("Invalid mapping configuration name " + key);
             }
             isDefaultMapping = true;
             toFSScheme = defaultMatcher.group(DEFAULT_TO_FS_IDX);

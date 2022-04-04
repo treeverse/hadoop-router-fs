@@ -138,7 +138,13 @@ public class PathMapperTest {
                 {"Missing default mapping configuration", new HashMap<String, String>() {{
                     put("routerfs.mapping.lakefs.1.replace", "s3a://bucket");
                     put("routerfs.mapping.lakefs.1.with", "lakefs://example-repo/b1");}},
-                        null, IOException.class}
+                        null, IllegalArgumentException.class},
+
+                {"Invalid mapping config fs scheme", new HashMap<String, String>() {{
+                    put("routerfs.mapping.#@.1.replace", "s3a://bucket");
+                    put("routerfs.mapping.#@.1.with", "#@://boo");}},
+                        null, InvalidPropertiesFormatException.class},
+
         });
     }
 
