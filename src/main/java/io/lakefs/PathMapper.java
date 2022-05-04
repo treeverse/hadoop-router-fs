@@ -20,11 +20,11 @@ public class PathMapper {
     public static final Logger LOG = LoggerFactory.getLogger(PathMapper.class);
 
     protected static final String MAPPING_CONFIG_PREFIX = "routerfs.mapping.";
-    protected static final String NON_DEFAULT_MAPPING_CONFIG_PATTERN = "^routerfs\\.mapping\\.([a-z0-9-_]*)\\.(\\d*)\\.(replace|with)";
+    protected static final String NON_DEFAULT_MAPPING_CONFIG_PATTERN = "^routerfs\\.mapping\\.(?<mappingScheme>[-a-z0-9_]*)\\.(?<mappingPriority>\\d*)\\.(?<mappingType>replace|with)";
+    protected static final String MAPPING_SCHEME_REGEX_GROUP_NAME = "mappingScheme";
+    protected static final String MAPPING_PRIORITY_REGEX_GROUP_NAME = "mappingPriority";
+    protected static final String MAPPING_TYPE_REGEX_GROUP_NAME = "mappingType";
     protected static final String DEFAULT_MAPPING_CONFIG_PATTERN = "^routerfs\\.mapping\\.(.*default)\\.(replace|with)";
-    protected static final int NON_DEFAULT_TO_FS_IDX = 1;
-    protected static final int NON_DEFAULT_MAPPING_IDX_IDX = 2;
-    protected static final int NON_DEFAULT_MAPPING_TYPE_IDX = 3;
     protected static final int DEFAULT_TO_FS_IDX = 1;
     protected static final int DEFAULT_MAPPING_TYPE_IDX = 2;
 
@@ -147,9 +147,9 @@ public class PathMapper {
         Matcher nonDefaultMatcher = mappingConfPattern.matcher(key);
         boolean nonDefaultMapping = nonDefaultMatcher.find();
         if (nonDefaultMapping) {
-            toFSScheme = nonDefaultMatcher.group(NON_DEFAULT_TO_FS_IDX);
-            mappingIdx = Integer.parseInt(nonDefaultMatcher.group(NON_DEFAULT_MAPPING_IDX_IDX));
-            type = "replace".equals(nonDefaultMatcher.group(NON_DEFAULT_MAPPING_TYPE_IDX))? MappingConfigType.REPLACE :
+            toFSScheme = nonDefaultMatcher.group(MAPPING_SCHEME_REGEX_GROUP_NAME);
+            mappingIdx = Integer.parseInt(nonDefaultMatcher.group(MAPPING_PRIORITY_REGEX_GROUP_NAME));
+            type = "replace".equals(nonDefaultMatcher.group(MAPPING_TYPE_REGEX_GROUP_NAME))? MappingConfigType.REPLACE :
                     MappingConfigType.WITH;
         } else {
             Pattern defaultPattern = Pattern.compile(DEFAULT_MAPPING_CONFIG_PATTERN);
