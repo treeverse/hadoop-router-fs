@@ -67,14 +67,16 @@ fs.lakefs.impl=S3AFileSystem
 
 Add the following configuration for the scheme you [configured](#configure-spark-to-use-routerfs) RouteFS to handle.
 ```properties
-routerfs.${fromFsScheme}.default.fs=${the file system you used for this scheme without routerFS}
+routerfs.default.fs.${fromFsScheme}=${the file system you used for this scheme without routerFS}
 ```
 For example, by adding:
 ```properties
-routerfs.s3a.default.fs=S3AFileSystem
+routerfs.default.fs.s3a=S3AFileSystem
 ```
 You are telling RouterFS to use `S3AFileSystem` for any URI with `scheme=s3a` for which RouterFS [did not find](#when-no-mapping-was-found)
 a mapping configuration. 
+
+At this point, RouterFS only supports a single default file system. 
 
 ## Usage
 
