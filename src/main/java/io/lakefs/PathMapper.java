@@ -45,8 +45,8 @@ public class PathMapper {
     }
 
     private void loadMappingConfig(Configuration conf) throws InvalidPropertiesFormatException {
-        List<MappingConfig> mappingConfiguration = parseMappingConfig(conf);
-        populatePathMappings(mappingConfiguration);
+        List<MappingConfig> mappingConfigurations = parseMappingConfig(conf);
+        populatePathMappings(mappingConfigurations);
 
         if (LOG.isDebugEnabled()) {
             logLoadedMappings();
@@ -93,7 +93,7 @@ public class PathMapper {
         List<MappingConfig> mappingConfig = new ArrayList<>();
         for (Map.Entry<String, String> hadoopConf : conf) {
             if (hadoopConf.getKey().startsWith(MAPPING_CONFIG_PREFIX)) {
-                MappingConfig mappingConf = parseConfKey(hadoopConf);
+                MappingConfig mappingConf = parseMappingConf(hadoopConf);
                 mappingConfig.add(mappingConf);
                 LOG.trace("Loaded and parsed mapping config with key:%s and value:%s", hadoopConf.getKey(), hadoopConf.getValue());
             }
@@ -129,14 +129,14 @@ public class PathMapper {
     }
 
     /**
-     * Parses hadoop configuration keys of the following formats:
-     * routerfs.mapping.${toFsScheme}.${mappingIdx}.{replace/with} and
-     * routerfs.mapping.${defaultToFsScheme}.{replace/with} into a {@link MappingConfig}.
+     * Parses hadoop configurations of the following formats:
+     * routerfs.mapping.${toFsScheme}.${mappingIdx}.{replace/with}=value and
+     * routerfs.mapping.${defaultToFsScheme}.{replace/with}=value into a {@link MappingConfig}.
      *
      * @param hadoopConf the config to parse
-     * @return parsed config
+     * @return parsed configuration
      */
-    private MappingConfig parseConfKey(Map.Entry<String, String> hadoopConf) throws InvalidPropertiesFormatException {
+    private MappingConfig parseMappingConf(Map.Entry<String, String> hadoopConf) throws InvalidPropertiesFormatException {
         String toFSScheme;
         int mappingIdx = 0;
         MappingConfigType type;
