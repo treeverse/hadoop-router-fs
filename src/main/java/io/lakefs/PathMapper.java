@@ -70,7 +70,7 @@ public class PathMapper {
      *
      * @param mappingConfiguration the configurations to create path mapping from
      */
-    private void populatePathMappings(List<MappingConfig> mappingConfiguration) {
+    private void populatePathMappings(List<MappingConfig> mappingConfiguration) throws InvalidPropertiesFormatException {
         List<MappingConfig> srcConfigs = mappingConfiguration.stream()
                 .filter(mc -> mc.getType() == MappingConfigType.REPLACE).collect(Collectors.toList());
 
@@ -79,9 +79,8 @@ public class PathMapper {
                     .filter(mc -> mc.getFromScheme().equals(srcConf.getFromScheme()) && mc.getPriority() == srcConf.getPriority()
                             && mc.getType() == MappingConfigType.WITH).findFirst();
             if (!matchingDstConf.isPresent()) {
-                LOG.warn("Missing a mapping configuration, expected to find mapping named %s.%d.%s.",
-                        srcConf.getFromScheme(), srcConf.getPriority(), MappingConfigType.WITH.name());
-                continue;
+                throw new InvalidPropertiesFormatException("Missing a mapping configuration, expected to find mapping named "
+                        + srcConf.getFromScheme() + "." + srcConf.getPriority() + "." + MappingConfigType.WITH.name());
             }
             PathMapping pathMapping = new PathMapping(srcConf, matchingDstConf.get());
             pathMappings.add(pathMapping);
