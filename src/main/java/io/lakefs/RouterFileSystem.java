@@ -28,6 +28,7 @@ public class RouterFileSystem extends FileSystem {
 
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
+        //TODO: parse default fs config and add a corresponding hadoop conf, then initialize with super
         this.pathMapper = new PathMapper(conf);
     }
 
