@@ -1,4 +1,4 @@
-package io.lakefs;
+package io.lakefs.routerfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;

@@ -1,4 +1,4 @@
-package io.lakefs;
+package io.lakefs.routerfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -10,7 +10,6 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.util.AbstractMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
