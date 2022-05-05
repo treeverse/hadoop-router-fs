@@ -1,5 +1,6 @@
-package io.lakefs;
+package io.lakefs.routerfs;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
@@ -9,18 +10,55 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class RouterFileSystem extends FileSystem {
 
     public static final Logger LOG = LoggerFactory.getLogger(RouterFileSystem.class);
+    private static final String DEFAULT_FS_CONF_PATTEREN = "^routerfs\\.default\\.fs\\.(?<fromScheme>[-a-z0-9_]*)";
+    private static final String DEFAULT_FS_SCHEME_REGEX_GROUP_NAME = "fromScheme";
+    private static final String DEFAULT_FS_SCHEME_SUFFIX = "-default";
+    private static final String DEFAULT_FS_CONF_PREFIX = "routerfs.default.fs";
+
+    private PathMapper pathMapper;
 
     /**
      * Returns a URI whose scheme and authority identify this FileSystem.
      */
     @Override
     public URI getUri() {
+        //TODO (Tals): what should be the URI
         return null;
+    }
+
+    @Override
+    public void initialize(URI name, Configuration conf) throws IOException {
+        // Find RouterFs' default file system configuration, and create a hadoop configuration that maps a new scheme to
+        // the default filesystem. e.g., the method converts a configuration of the form
+        // routerfs.default.fs.s3a=S3AFileSystem into fs.s3a-default.impl=S3AFileSystem.
+        Map.Entry<String, String> defaultFsConf = getDefaultFsConf(conf);
+        Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTEREN);
+        Matcher matcher = pattern.matcher(defaultFsConf.getKey());
+        String defaultFromScheme = null;
+        String defaultToScheme = null;
+        if (matcher.find()) {
+            defaultFromScheme = matcher.group(DEFAULT_FS_SCHEME_REGEX_GROUP_NAME);
+            defaultToScheme = defaultFromScheme + DEFAULT_FS_SCHEME_SUFFIX;
+        }
+        conf.set("fs." + defaultToScheme + ".impl", defaultFsConf.getValue());
+        super.initialize(name, conf);
+        this.pathMapper = new PathMapper(conf, defaultFromScheme, defaultToScheme);
+    }
+
+    private Map.Entry<String, String> getDefaultFsConf(Configuration conf) {
+        for (Map.Entry<String, String> hadoopConf : conf) {
+            if (hadoopConf.getKey().startsWith(DEFAULT_FS_CONF_PREFIX)) {
+                return hadoopConf;
+            }
+        }
+        throw new IllegalArgumentException("Missing default file system configuration");
     }
 
     /**
@@ -31,6 +69,10 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
+        return null;
+    }
+
+    private Path translatePath(Path f) {
         return null;
     }
 
@@ -154,6 +196,10 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
+//        Path mappedPath = pathMapper.mapPath(f);
+//        Configuration conf = getConf();
+//        FileSystem fs = mappedPath.getFileSystem(conf);
+//        return fs.getFileStatus(mappedPath);
         return null;
     }
 }
