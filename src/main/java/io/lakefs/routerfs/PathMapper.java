@@ -27,6 +27,8 @@ public class PathMapper {
     protected static final String MAPPING_PRIORITY_REGEX_GROUP_NAME = "mappingPriority";
     protected static final String MAPPING_TYPE_REGEX_GROUP_NAME = "mappingType";
     protected static final String URI_SCHEME_SEPARATOR = "://";
+    protected static final int CONFIG_PAIR = 2;
+
 
 
     enum MappingConfigType {
@@ -69,19 +71,35 @@ public class PathMapper {
      * @param mappingConfiguration the configurations to create path mapping from
      */
     private void populatePathMappings(List<MappingConfig> mappingConfiguration) throws InvalidPropertiesFormatException {
-        List<MappingConfig> srcConfigs = mappingConfiguration.stream()
-                .filter(mc -> mc.getType() == MappingConfigType.SOURCE).collect(Collectors.toList());
-
-        for (MappingConfig srcConf : srcConfigs) {
-            Optional<MappingConfig> matchingDstConf = mappingConfiguration.stream()
-                    .filter(mc -> mc.getFromScheme().equals(srcConf.getFromScheme()) && mc.getPriority() == srcConf.getPriority()
-                            && mc.getType() == MappingConfigType.DEST).findFirst();
-            if (!matchingDstConf.isPresent()) {
-                throw new InvalidPropertiesFormatException("Missing a mapping configuration, expected to find mapping named "
-                        + srcConf.getFromScheme() + "." + srcConf.getPriority() + "." + MappingConfigType.DEST.name());
+        Map<String, Map<Integer, List<MappingConfig>>> scheme2priority2ConfigPair = new HashMap<>();
+        for (MappingConfig conf : mappingConfiguration) {
+            String fromScheme = conf.getFromScheme();
+            int priority = conf.getPriority();
+            Map<Integer, List<MappingConfig>> priority2ConfigPair = scheme2priority2ConfigPair.get(fromScheme);
+            if (priority2ConfigPair == null) {
+                priority2ConfigPair = new HashMap();
+                scheme2priority2ConfigPair.put(fromScheme, priority2ConfigPair);
             }
-            PathMapping pathMapping = new PathMapping(srcConf, matchingDstConf.get());
-            pathMappings.add(pathMapping);
+            List<MappingConfig> configPair = priority2ConfigPair.get(priority);
+            if (configPair == null) {
+                configPair = new ArrayList<>();
+                priority2ConfigPair.put(priority, configPair);
+            }
+            configPair.add(conf);
+
+            // Create path mapping when we've collected a pair.
+            if (configPair.size() == CONFIG_PAIR) {
+                // The order in which we've added the configurations is unknown, therefore, we need to find the src and dst
+                // configs indices.
+                int srcIndex = 0;
+                int dstIndex = 1;
+                if (configPair.get(0).getType() == MappingConfigType.DEST) {
+                    srcIndex = 1;
+                    dstIndex = 0;
+                }
+                PathMapping pathMapping = new PathMapping(configPair.get(srcIndex), configPair.get(dstIndex));
+                pathMappings.add(pathMapping);
+            }
         }
         sortPathMappingsBySchemeAndIdx();
     }

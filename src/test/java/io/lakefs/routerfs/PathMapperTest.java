@@ -1,6 +1,5 @@
 package io.lakefs.routerfs;
 
-import io.lakefs.routerfs.PathMapper;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -125,11 +124,6 @@ public class PathMapperTest {
                     put("s3a://bucket/bar/a.txt", "s3a-default://bucket/bar/a.txt");
                     put("s3a://a.txt", "s3a-default://a.txt");
                 }}, null},
-
-                {"Missing mapping destination", new HashMap<String, String>() {{
-                    put("routerfs.mapping.s3a.1.replace", "s3a://bucket/");
-                }}, "s3a", "s3a-default",
-                        null, InvalidPropertiesFormatException.class},
 
                 {"Invalid mapping config index", new HashMap<String, String>() {{
                     put("routerfs.mapping.s3a.notAnInt.replace", "s3a://bucket");
