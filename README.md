@@ -11,7 +11,20 @@ another Hadoop file system that executes it against the underlying object store.
 
 ## Build instructions 
 
-TODO
+#### Pre-requisites 
+- Install maven 
+
+#### Build instructions
+
+1. Clone the repo with 
+    ```shell
+    git clone git@github.com:treeverse/hadoop-router-fs.git
+    ```
+
+2. Build with maven
+```shell
+mvn clean install
+```
 
 ## How to configure RouterFS 
 
@@ -28,7 +41,7 @@ URI with `scheme=s3a`.
 
 ### Add custom Mapping Configurations
 
-RouterFS consumes your mapping configurations to understand which paths it needs to modify and how to modify it. It then 
+RouterFS consumes your mapping configurations to understand which paths it needs to modify and how to modify them. It then 
 does a simple prefix replacement accordingly. 
 Mapping configurations are Spark properties of the following form:
 `routerfs.mapping.${fromFsScheme}.${mappingIdx}.${replace/with}=${path-prefix}`
@@ -82,12 +95,10 @@ At this point, RouterFS only supports a single default file system.
 
 ### Run your Spark Application with RouterFS 
 
-After [building](#build-instructions) RouterFS, you should supply its jar to your Spark application runtime. 
-```shell
-TODO 
-```
+After [building](#build-instructions) RouterFS, the build artifact is a jar under the target directory. 
+You should supply its jar to your Spark application runtime. 
 
 ## Usage with lakeFS 
 
-The current version of RouterFS only works for Spark applications that interact with lakeFS' via the [S3 Gateway](https://docs.lakefs.io/integrations/spark.html#access-lakefs-using-the-s3a-gateway). 
+The current version of RouterFS only works for Spark applications that interact with lakeFS via the [S3 Gateway](https://docs.lakefs.io/integrations/spark.html#access-lakefs-using-the-s3a-gateway). 
 That is, you can't use both RouterFS and LakeFSFileSystem together, but we have [concrete plans](https://github.com/treeverse/lakeFS/issues/3058) to make this work.

@@ -30,8 +30,8 @@ public class PathMapper {
 
 
     enum MappingConfigType {
-        REPLACE,
-        WITH
+        SOURCE,
+        DEST
     }
 
     private List<PathMapping> pathMappings;
@@ -46,8 +46,8 @@ public class PathMapper {
     }
 
     private PathMapping createDefaultMapping(String defaultFromScheme, String defaultToScheme) {
-        MappingConfig srcMapping = new MappingConfig(MappingConfigType.REPLACE, null, defaultFromScheme, defaultFromScheme + URI_SCHEME_SEPARATOR);
-        MappingConfig dstMapping = new MappingConfig(MappingConfigType.WITH, null, defaultToScheme, defaultToScheme + URI_SCHEME_SEPARATOR);
+        MappingConfig srcMapping = new MappingConfig(MappingConfigType.SOURCE, null, defaultFromScheme, defaultFromScheme + URI_SCHEME_SEPARATOR);
+        MappingConfig dstMapping = new MappingConfig(MappingConfigType.DEST, null, defaultToScheme, defaultToScheme + URI_SCHEME_SEPARATOR);
         return new PathMapping(srcMapping, dstMapping, true);
     }
 
@@ -61,10 +61,8 @@ public class PathMapper {
     }
 
     /**
-     * Pair mapping configuration that form a {@link PathMapping}, and populate the pathMapping list.
-     * Two mapping configuration are paired together in case they share the same fromFsScheme and mappingIdx, but have
-     * different {@link MappingConfigType}.
-     * e.g. the following two mapping configuration for a path mapping:
+     * Find pairs of source and dest configurations and create a {@link PathMapping} for each.
+     * e.g. the following two mapping configurations will form a single PathMapping:
      * routerfs.mapping.s3a.1.replace='s3a://bucket/'
      * routerfs.mapping.s3a.1.with='lakefs://example-repo/dev/'
      *
@@ -72,15 +70,15 @@ public class PathMapper {
      */
     private void populatePathMappings(List<MappingConfig> mappingConfiguration) throws InvalidPropertiesFormatException {
         List<MappingConfig> srcConfigs = mappingConfiguration.stream()
-                .filter(mc -> mc.getType() == MappingConfigType.REPLACE).collect(Collectors.toList());
+                .filter(mc -> mc.getType() == MappingConfigType.SOURCE).collect(Collectors.toList());
 
         for (MappingConfig srcConf : srcConfigs) {
             Optional<MappingConfig> matchingDstConf = mappingConfiguration.stream()
                     .filter(mc -> mc.getFromScheme().equals(srcConf.getFromScheme()) && mc.getPriority() == srcConf.getPriority()
-                            && mc.getType() == MappingConfigType.WITH).findFirst();
+                            && mc.getType() == MappingConfigType.DEST).findFirst();
             if (!matchingDstConf.isPresent()) {
                 throw new InvalidPropertiesFormatException("Missing a mapping configuration, expected to find mapping named "
-                        + srcConf.getFromScheme() + "." + srcConf.getPriority() + "." + MappingConfigType.WITH.name());
+                        + srcConf.getFromScheme() + "." + srcConf.getPriority() + "." + MappingConfigType.DEST.name());
             }
             PathMapping pathMapping = new PathMapping(srcConf, matchingDstConf.get());
             pathMappings.add(pathMapping);
@@ -132,7 +130,7 @@ public class PathMapper {
 
     /**
      * Parses hadoop configurations of the following form:
-     * routerfs.mapping.${fromFsScheme}.${mappingIdx}.{replace/with}=value and
+     * routerfs.mapping.${fromFsScheme}.${mappingIdx}.{replace/with}=prefix and
      *
      * @param hadoopConf the config to parse
      * @return parsed configuration
@@ -148,9 +146,9 @@ public class PathMapper {
         if (matcher.find()) {
             fromFSScheme = matcher.group(MAPPING_SCHEME_REGEX_GROUP_NAME);
             mappingPriority = Integer.parseInt(matcher.group(MAPPING_PRIORITY_REGEX_GROUP_NAME));
-            type = "replace".equals(matcher.group(MAPPING_TYPE_REGEX_GROUP_NAME))? MappingConfigType.REPLACE :
-                    MappingConfigType.WITH;
-            if (type == MappingConfigType.REPLACE && !hadoopConf.getValue().startsWith(fromFSScheme)) {
+            type = "replace".equals(matcher.group(MAPPING_TYPE_REGEX_GROUP_NAME))? MappingConfigType.SOURCE :
+                    MappingConfigType.DEST;
+            if (type == MappingConfigType.SOURCE && !hadoopConf.getValue().startsWith(fromFSScheme)) {
                 throw new InvalidPropertiesFormatException("Invalid hadoop conf: " + hadoopConf + " mapping src value " +
                         "should match its fromScheme");
             }
@@ -184,7 +182,7 @@ public class PathMapper {
      */
     private Path convertPath(Path path, PathMapping pathMapping) {
         String str = path.toString();
-        String convertedPath = str.replaceFirst(pathMapping.getSrcPrefix().getValue(), pathMapping.getDstPrefix().getValue());
+        String convertedPath = str.replaceFirst(pathMapping.getSrcConfig().getPrefix(), pathMapping.getDstConfig().getPrefix());
         LOG.trace("Converted % to % using path mapping %s", path, convertedPath,  pathMapping);
         return new Path(convertedPath);
     }
@@ -201,8 +199,8 @@ public class PathMapper {
      */
     private static class PathMapping {
 
-        private MappingConfig srcPrefix;
-        private MappingConfig dstPrefix;
+        private MappingConfig srcConfig;
+        private MappingConfig dstConfig;
         private int priority;
         private String fromScheme;
         private boolean defaultMapping;
@@ -211,21 +209,21 @@ public class PathMapper {
             this(srcPrefix, dstPrefix, false);
         }
 
-        public PathMapping(MappingConfig srcPrefix, MappingConfig dstPrefix, boolean defaultMapping) {
+        public PathMapping(MappingConfig srcConfig, MappingConfig dstConfig, boolean defaultMapping) {
             this.defaultMapping = defaultMapping;
-            this.srcPrefix = srcPrefix;
-            this.dstPrefix = dstPrefix;
-            if (!srcPrefix.getFromScheme().equals(dstPrefix.getFromScheme())) {
+            this.srcConfig = srcConfig;
+            this.dstConfig = dstConfig;
+            if (!srcConfig.getFromScheme().equals(dstConfig.getFromScheme())) {
                 LOG.error("src and dst schemes must match, cannot create PathMapping. src:"
-                        + srcPrefix.getFromScheme() + " dst: " + dstPrefix.getFromScheme());
+                        + srcConfig.getFromScheme() + " dst: " + dstConfig.getFromScheme());
             }
-            this.fromScheme = srcPrefix.getFromScheme();
+            this.fromScheme = srcConfig.getFromScheme();
             if (!this.defaultMapping) {
-                if (srcPrefix.getPriority() != dstPrefix.getPriority()) {
+                if (srcConfig.getPriority() != dstConfig.getPriority()) {
                     LOG.error("src and dst indices must match, cannot create PathMapping. src:"
-                            + srcPrefix.getPriority() + " dst: " + dstPrefix.getPriority());
+                            + srcConfig.getPriority() + " dst: " + dstConfig.getPriority());
                 }
-                this.priority = srcPrefix.getPriority();
+                this.priority = srcConfig.getPriority();
             }
         }
 
@@ -238,15 +236,15 @@ public class PathMapper {
          */
         public boolean isAppropriateMapping(Path p) {
             String str = p.toString();
-            return str.startsWith(srcPrefix.getValue());
+            return str.startsWith(srcConfig.getPrefix());
         }
 
-        public MappingConfig getSrcPrefix() {
-            return srcPrefix;
+        public MappingConfig getSrcConfig() {
+            return srcConfig;
         }
 
-        public MappingConfig getDstPrefix() {
-            return dstPrefix;
+        public MappingConfig getDstConfig() {
+            return dstConfig;
         }
 
         public String getFromScheme() {
@@ -259,32 +257,32 @@ public class PathMapper {
 
         @Override
         public String toString() {
-            return "srcPrefix=" + this.srcPrefix + " dstPrefix=" + this.dstPrefix;
+            return "srcPrefix=" + this.srcConfig + " dstPrefix=" + this.dstConfig;
         }
     }
 
     /**
      * A class that represents a parsed Path mapping configurations supported by RouterFileSystem.
-     * Mapping configuration form is: routerfs.mapping.${fromFsScheme}.${mappingIdx}.${replace/with}=value.
+     * Mapping configuration form is: routerfs.mapping.${fromFsScheme}.${mappingIdx}.${replace/with}=prefix.
      */
     private static class MappingConfig {
         private MappingConfigType type;
         private Integer priority;
         private String fromScheme;
-        private String value;
+        private String prefix;
 
         public MappingConfig(@Nonnull MappingConfigType type, @Nullable Integer priority, @Nonnull String fromScheme,
-                             @Nonnull String value) {
+                             @Nonnull String prefix) {
             this.type = type;
             this.priority = priority;
             this.fromScheme = fromScheme;
-            this.value = value;
+            this.prefix = prefix;
         }
 
         @Override
         public String toString() {
             return "toScheme=" + this.fromScheme + " type=" + this.type.name() + " index=" + this.priority + " value=" +
-                    this.value;
+                    this.prefix;
         }
 
         public String getFromScheme() {
@@ -299,8 +297,8 @@ public class PathMapper {
             return type;
         }
 
-        public String getValue() {
-            return value;
+        public String getPrefix() {
+            return prefix;
         }
     }
 }
