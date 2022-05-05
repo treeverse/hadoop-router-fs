@@ -29,8 +29,6 @@ public class PathMapper {
     protected static final String URI_SCHEME_SEPARATOR = "://";
     protected static final int CONFIG_PAIR = 2;
 
-
-
     enum MappingConfigType {
         SOURCE,
         DEST
