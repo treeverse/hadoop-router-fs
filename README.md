@@ -1,6 +1,6 @@
 # hadoop-router-fs
 
-[RouterFileSystem](src/main/java/io/lakefs/RouterFileSystem.java) is a Hadoop [FileSystem](https://hadoop.apache.org/docs/stable/api/org/apache/hadoop/fs/FileSystem.html) 
+[RouterFileSystem](src/main/java/io/lakefs/RouterFileSystem.java) is a Hadoop [FileSystem](https://hadoop.apache.org/docs/stable/api/org/apache/hadoop/fs/FileSystem.html) class
 implementation that transforms URIs at runtime according to provided configurations. It then routes file system operations to 
 another Hadoop file system that executes it against the underlying object store. 
 
@@ -71,7 +71,7 @@ file system](#default-file-system) for the URI scheme.
 
 The final configuration step is to tell Spark what file system to use for each URI scheme. You should make sure that you 
 add this configuration for any URI scheme you defined a mapping configuration for.
-For example, to tell Spark to use `S3AFileSystem` for any URI with `scheme=s3a`
+For example, to tell Spark to use `S3AFileSystem` for any URI with `scheme=lakefs`
 ```properties
 fs.lakefs.impl=S3AFileSystem
 ```
