@@ -1,6 +1,6 @@
 # hadoop-router-fs
 
-[RouterFileSystem](src/main/java/io/lakefs/RouterFileSystem.java) is a Hadoop [FileSystem](https://hadoop.apache.org/docs/stable/api/org/apache/hadoop/fs/FileSystem.html) class
+[RouterFileSystem](src/main/java/io/lakefs/RouterFileSystem.java) is a Hadoop [FileSystem](https://hadoop.apache.org/docs/stable/api/org/apache/hadoop/fs/FileSystem.html) 
 implementation that transforms URIs at runtime according to provided configurations. It then routes file system operations to 
 another Hadoop file system that executes it against the underlying object store. 
 
