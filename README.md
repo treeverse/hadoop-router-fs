@@ -71,7 +71,7 @@ file system](#default-file-system) for the URI scheme.
 
 The final configuration step is to tell Spark what file system to use for each URI scheme. You should make sure that you 
 add this configuration for any URI scheme you defined a mapping configuration for.
-For example, to tell Spark to use `S3AFileSystem` for any URI with `scheme=s3a`
+For example, to tell Spark to use `S3AFileSystem` for any URI with `scheme=lakefs`
 ```properties
 fs.lakefs.impl=S3AFileSystem
 ```
