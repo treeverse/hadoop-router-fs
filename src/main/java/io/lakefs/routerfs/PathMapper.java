@@ -229,15 +229,20 @@ public class PathMapper {
             this.defaultMapping = defaultMapping;
             this.srcConfig = srcConfig;
             this.dstConfig = dstConfig;
-            if (!srcConfig.getFromScheme().equals(dstConfig.getFromScheme())) {
-                LOG.error("src and dst schemes must match, cannot create PathMapping. src:"
-                        + srcConfig.getFromScheme() + " dst: " + dstConfig.getFromScheme());
-            }
             this.fromScheme = srcConfig.getFromScheme();
+
             if (!this.defaultMapping) {
+                if (!srcConfig.getFromScheme().equals(dstConfig.getFromScheme())) {
+                    LOG.error("src and dst schemes must match, cannot create PathMapping. src: {}, dst: {}.",
+                            srcConfig.getFromScheme(),
+                            dstConfig.getFromScheme()
+                    );
+                }
                 if (srcConfig.getPriority() != dstConfig.getPriority()) {
-                    LOG.error("src and dst indices must match, cannot create PathMapping. src:"
-                            + srcConfig.getPriority() + " dst: " + dstConfig.getPriority());
+                    LOG.error("src and dst indices must match, cannot create PathMapping. src: {}, dst: {}.",
+                            srcConfig.getPriority(),
+                            dstConfig.getPriority()
+                    );
                 }
                 this.priority = srcConfig.getPriority();
             }
