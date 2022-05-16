@@ -1,5 +1,6 @@
 package io.lakefs.routerfs;
 
+import lombok.Getter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -73,16 +74,8 @@ public class PathMapper {
         for (MappingConfig conf : mappingConfiguration) {
             String fromScheme = conf.getFromScheme();
             int priority = conf.getPriority();
-            Map<Integer, List<MappingConfig>> priority2ConfigPair = scheme2priority2ConfigPair.get(fromScheme);
-            if (priority2ConfigPair == null) {
-                priority2ConfigPair = new HashMap();
-                scheme2priority2ConfigPair.put(fromScheme, priority2ConfigPair);
-            }
-            List<MappingConfig> configPair = priority2ConfigPair.get(priority);
-            if (configPair == null) {
-                configPair = new ArrayList<>();
-                priority2ConfigPair.put(priority, configPair);
-            }
+            Map<Integer, List<MappingConfig>> priority2ConfigPair = scheme2priority2ConfigPair.computeIfAbsent(fromScheme, k -> new HashMap<>());
+            List<MappingConfig> configPair = priority2ConfigPair.computeIfAbsent(priority, k -> new ArrayList<>());
             configPair.add(conf);
 
             // Create path mapping when we've collected a pair.
@@ -213,6 +206,7 @@ public class PathMapper {
      * PathMapping represents a pair of mapping configurations, that define source and destination prefixes to
      * be replaced.
      */
+    @Getter
     private static class PathMapping {
 
         private final MappingConfig srcConfig;
@@ -233,7 +227,7 @@ public class PathMapper {
             }
             this.fromScheme = srcConfig.getFromScheme();
             if (!defaultMapping) {
-                if (srcConfig.getPriority() != dstConfig.getPriority()) {
+                if (srcConfig.getPriority().intValue() != dstConfig.getPriority().intValue()) {
                     LOG.error("src and dst indices must match, cannot create PathMapping. src:"
                             + srcConfig.getPriority() + " dst: " + dstConfig.getPriority());
                 }
@@ -253,22 +247,6 @@ public class PathMapper {
             return str.startsWith(srcConfig.getPrefix());
         }
 
-        public MappingConfig getSrcConfig() {
-            return srcConfig;
-        }
-
-        public MappingConfig getDstConfig() {
-            return dstConfig;
-        }
-
-        public String getFromScheme() {
-            return fromScheme;
-        }
-
-        public int getPriority() {
-            return priority;
-        }
-
         @Override
         public String toString() {
             return "srcPrefix=" + this.srcConfig + " dstPrefix=" + this.dstConfig;
@@ -279,11 +257,12 @@ public class PathMapper {
      * A class that represents a parsed Path mapping configurations supported by RouterFileSystem.
      * Mapping configuration form is: routerfs.mapping.${fromFsScheme}.${mappingIdx}.${replace/with}=prefix.
      */
+    @Getter
     private static class MappingConfig {
-        private MappingConfigType type;
-        private Integer priority;
-        private String fromScheme;
-        private String prefix;
+        private final MappingConfigType type;
+        private final Integer priority;
+        private final String fromScheme;
+        private final String prefix;
 
         public MappingConfig(@Nonnull MappingConfigType type, @Nullable Integer priority, @Nonnull String fromScheme,
                              @Nonnull String prefix) {
@@ -297,22 +276,6 @@ public class PathMapper {
         public String toString() {
             return "toScheme=" + this.fromScheme + " type=" + this.type.name() + " index=" + this.priority + " value=" +
                     this.prefix;
-        }
-
-        public String getFromScheme() {
-            return fromScheme;
-        }
-
-        public int getPriority() {
-            return priority;
-        }
-
-        public MappingConfigType getType() {
-            return type;
-        }
-
-        public String getPrefix() {
-            return prefix;
         }
     }
 }
