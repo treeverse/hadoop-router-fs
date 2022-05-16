@@ -1,6 +1,7 @@
 package io.lakefs.routerfs;
 
 import io.lakefs.routerfs.dto.FileSystemPathTuple;
+import lombok.NoArgsConstructor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@NoArgsConstructor
 public class RouterFileSystem extends FileSystem {
 
     public static final Logger LOG = LoggerFactory.getLogger(RouterFileSystem.class);
@@ -24,15 +26,19 @@ public class RouterFileSystem extends FileSystem {
     private static final String DEFAULT_FS_CONF_PREFIX = "routerfs.default.fs";
 
     private PathMapper pathMapper;
+
     private Path workingDirectory;
+
+    public RouterFileSystem(PathMapper pathMapper) {
+        this.pathMapper = pathMapper;
+    }
 
     /**
      * Returns a URI whose scheme and authority identify this FileSystem.
      */
     @Override
     public URI getUri() {
-        //TODO (Tals): what should be the URI
-        return null;
+        return getWorkingDirectory().toUri();
     }
 
     @Override
@@ -52,7 +58,9 @@ public class RouterFileSystem extends FileSystem {
         conf.set("fs." + defaultToScheme + ".impl", defaultFsConf.getValue());
         this.setConf(conf);
         super.initialize(name, conf);
-        this.pathMapper = new PathMapper(conf, defaultFromScheme, defaultToScheme);
+        if(this.pathMapper == null) {
+            this.pathMapper = new PathMapper(conf, defaultFromScheme, defaultToScheme);
+        }
         this.workingDirectory = new Path(name);
     }
 
@@ -77,10 +85,6 @@ public class RouterFileSystem extends FileSystem {
         return tuple.getFileSystem().open(tuple.getPath(), bufferSize);
     }
 
-    private Path translatePath(Path f) {
-        return null;
-    }
-
     /**
      * Create an FSDataOutputStream at the indicated Path with write-progress
      * reporting.
@@ -97,7 +101,10 @@ public class RouterFileSystem extends FileSystem {
      * @see #setPermission(Path, FsPermission)
      */
     @Override
-    public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite, int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
+    public FSDataOutputStream create(Path f, FsPermission permission,
+                                     boolean overwrite, int bufferSize,
+                                     short replication, long blockSize,
+                                     Progressable progress) throws IOException {
         FileSystemPathTuple tuple = generateFSPathTuple(f);
         return tuple.getFileSystem().create(tuple.getPath(), permission, overwrite, bufferSize, replication, blockSize, progress);
     }
@@ -177,8 +184,8 @@ public class RouterFileSystem extends FileSystem {
     public void setWorkingDirectory(Path new_dir) {
         try {
             FileSystemPathTuple tuple = generateFSPathTuple(new_dir);
-            this.workingDirectory = tuple.getPath();
             tuple.getFileSystem().setWorkingDirectory(tuple.getPath());
+            this.workingDirectory = new_dir;
         } catch (IOException e) {
             LOG.error("Failed setting a working directory with exception:\n{}", e.getLocalizedMessage());
         }
@@ -219,7 +226,7 @@ public class RouterFileSystem extends FileSystem {
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
         FileSystemPathTuple tuple = generateFSPathTuple(f);
-        return tuple.getFileSystem().getFileStatus(f);
+        return tuple.getFileSystem().getFileStatus(tuple.getPath());
     }
 
     private FileSystemPathTuple generateFSPathTuple(Path p) throws IOException {
