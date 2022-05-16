@@ -54,7 +54,7 @@ public class PathMapper {
 
     private void loadMappingConfig(Configuration conf) throws InvalidPropertiesFormatException {
         List<MappingConfig> mappingConfigurations = parseMappingConfig(conf);
-        populatePathMappings(mappingConfigurations);
+        this.pathMappings = populatePathMappings(mappingConfigurations);
 
         if (LOG.isDebugEnabled()) {
             logLoadedMappings();
@@ -69,10 +69,11 @@ public class PathMapper {
      *
      * @param mappingConfiguration the configurations to create path mapping from
      */
-    private void populatePathMappings(List<MappingConfig> mappingConfiguration) throws InvalidPropertiesFormatException {
+    private List<PathMapping> populatePathMappings(List<MappingConfig> mappingConfiguration) throws InvalidPropertiesFormatException {
+        List<PathMapping> pathMappings = new ArrayList<>();
         Map<String, Map<Integer, List<MappingConfig>>> scheme2priority2ConfigPair = new HashMap<>();
         for (MappingConfig conf : mappingConfiguration) {
-            String fromScheme = conf.getFromScheme();
+            String fromScheme = conf.getGroupScheme();
             int priority = conf.getPriority();
             Map<Integer, List<MappingConfig>> priority2ConfigPair = scheme2priority2ConfigPair.computeIfAbsent(fromScheme, k -> new HashMap<>());
             List<MappingConfig> configPair = priority2ConfigPair.computeIfAbsent(priority, k -> new ArrayList<>());
@@ -92,7 +93,8 @@ public class PathMapper {
                 pathMappings.add(pathMapping);
             }
         }
-        sortPathMappingsBySchemeAndIdx();
+        sortPathMappingsBySchemeAndIdx(pathMappings);
+        return pathMappings;
     }
 
     /**
@@ -127,7 +129,7 @@ public class PathMapper {
      * Sort the loaded path mappings by scheme and then idx. This is required by the path mapper because
      * mapping configurations are applied in-order.
      */
-    private void sortPathMappingsBySchemeAndIdx() {
+    private void sortPathMappingsBySchemeAndIdx(List<PathMapping> pathMappings) {
         Comparator<PathMapping> bySchemeAndIndex = Comparator
                 .comparing(PathMapping::getFromScheme)
                 .thenComparing(PathMapping::getPriority);
@@ -221,11 +223,11 @@ public class PathMapper {
         public PathMapping(MappingConfig srcConfig, MappingConfig dstConfig, boolean defaultMapping) {
             this.srcConfig = srcConfig;
             this.dstConfig = dstConfig;
-            if (!srcConfig.getFromScheme().equals(dstConfig.getFromScheme())) {
+            if (!srcConfig.getGroupScheme().equals(dstConfig.getGroupScheme())) {
                 LOG.error("src and dst schemes must match, cannot create PathMapping. src:"
-                        + srcConfig.getFromScheme() + " dst: " + dstConfig.getFromScheme());
+                        + srcConfig.getGroupScheme() + " dst: " + dstConfig.getGroupScheme());
             }
-            this.fromScheme = srcConfig.getFromScheme();
+            this.fromScheme = srcConfig.getGroupScheme();
             if (!defaultMapping) {
                 if (srcConfig.getPriority().intValue() != dstConfig.getPriority().intValue()) {
                     LOG.error("src and dst indices must match, cannot create PathMapping. src:"
@@ -261,20 +263,20 @@ public class PathMapper {
     private static class MappingConfig {
         private final MappingConfigType type;
         private final Integer priority;
-        private final String fromScheme;
+        private final String groupScheme;
         private final String prefix;
 
-        public MappingConfig(@Nonnull MappingConfigType type, @Nullable Integer priority, @Nonnull String fromScheme,
+        public MappingConfig(@Nonnull MappingConfigType type, @Nullable Integer priority, @Nonnull String groupScheme,
                              @Nonnull String prefix) {
             this.type = type;
             this.priority = priority;
-            this.fromScheme = fromScheme;
+            this.groupScheme = groupScheme;
             this.prefix = prefix;
         }
 
         @Override
         public String toString() {
-            return "toScheme=" + this.fromScheme + " type=" + this.type.name() + " index=" + this.priority + " value=" +
+            return "toScheme=" + this.groupScheme + " type=" + this.type.name() + " index=" + this.priority + " value=" +
                     this.prefix;
         }
     }
