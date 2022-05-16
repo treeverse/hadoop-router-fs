@@ -35,7 +35,7 @@ public class PathMapper {
     }
 
     private List<PathMapping> pathMappings;
-    private PathMapping defaultMapping;
+    private final PathMapping defaultMapping;
 
     public PathMapper(Configuration conf, String defaultFromScheme, String defaultToScheme) throws IOException {
         Objects.requireNonNull(defaultFromScheme);
@@ -111,7 +111,7 @@ public class PathMapper {
             if (hadoopConf.getKey().startsWith(MAPPING_CONFIG_PREFIX)) {
                 MappingConfig mappingConf = parseMappingConf(hadoopConf);
                 mappingConfig.add(mappingConf);
-                LOG.trace("Loaded and parsed mapping config with key:%s and value:%s", hadoopConf.getKey(), hadoopConf.getValue());
+                LOG.trace("Loaded and parsed mapping config with key:{} and value:{}", hadoopConf.getKey(), hadoopConf.getValue());
             }
         }
         return mappingConfig;
@@ -126,7 +126,7 @@ public class PathMapper {
             LOG.debug(pm.toString());
         }
         if (defaultMapping != null) {
-            LOG.debug("defaultMapping: " + defaultMapping.toString());
+            LOG.debug("defaultMapping: " + defaultMapping);
         }
     }
 
@@ -153,7 +153,7 @@ public class PathMapper {
      */
     private MappingConfig parseMappingConf(Map.Entry<String, String> hadoopConf) throws InvalidPropertiesFormatException {
         String fromFSScheme;
-        int mappingPriority = 0;
+        int mappingPriority;
         MappingConfigType type;
         String key = hadoopConf.getKey();
 
@@ -183,7 +183,7 @@ public class PathMapper {
     public Path mapPath(Path origPath) {
         PathMapping pathMapping = findAppropriatePathMapping(origPath);
         if (pathMapping == null) {
-            LOG.trace("Can't find a matching path mapping for %s, using default mapping", origPath);
+            LOG.trace("Can't find a matching path mapping for {}, using default mapping", origPath);
             pathMapping = defaultMapping;
         }
         return convertPath(origPath, pathMapping);
@@ -199,14 +199,14 @@ public class PathMapper {
     private Path convertPath(Path path, PathMapping pathMapping) {
         String str = path.toString();
         String convertedPath = str.replaceFirst(pathMapping.getSrcConfig().getPrefix(), pathMapping.getDstConfig().getPrefix());
-        LOG.trace("Converted % to % using path mapping %s", path, convertedPath,  pathMapping);
+        LOG.trace("Converted {} to {} using path mapping {}", path, convertedPath,  pathMapping);
         return new Path(convertedPath);
     }
 
     private PathMapping findAppropriatePathMapping(Path path) {
         Optional<PathMapping> appropriateMap = pathMappings.stream()
                 .filter(pm -> pm.isAppropriateMapping(path)).findFirst();
-        return appropriateMap.isPresent() ? appropriateMap.get() : null;
+        return appropriateMap.orElse(null);
     }
 
     /**
@@ -215,18 +215,16 @@ public class PathMapper {
      */
     private static class PathMapping {
 
-        private MappingConfig srcConfig;
-        private MappingConfig dstConfig;
+        private final MappingConfig srcConfig;
+        private final MappingConfig dstConfig;
         private int priority;
-        private String fromScheme;
-        private boolean defaultMapping;
+        private final String fromScheme;
 
         public PathMapping(MappingConfig srcPrefix, MappingConfig dstPrefix) {
             this(srcPrefix, dstPrefix, false);
         }
 
         public PathMapping(MappingConfig srcConfig, MappingConfig dstConfig, boolean defaultMapping) {
-            this.defaultMapping = defaultMapping;
             this.srcConfig = srcConfig;
             this.dstConfig = dstConfig;
             if (!srcConfig.getFromScheme().equals(dstConfig.getFromScheme())) {
@@ -234,7 +232,7 @@ public class PathMapper {
                         + srcConfig.getFromScheme() + " dst: " + dstConfig.getFromScheme());
             }
             this.fromScheme = srcConfig.getFromScheme();
-            if (!this.defaultMapping) {
+            if (!defaultMapping) {
                 if (srcConfig.getPriority() != dstConfig.getPriority()) {
                     LOG.error("src and dst indices must match, cannot create PathMapping. src:"
                             + srcConfig.getPriority() + " dst: " + dstConfig.getPriority());
