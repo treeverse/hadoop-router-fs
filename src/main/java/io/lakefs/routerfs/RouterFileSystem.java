@@ -158,6 +158,12 @@ public class RouterFileSystem extends FileSystem {
     @Override
     public boolean delete(Path f, boolean recursive) throws IOException {
         FileSystemPathTuple tuple = generateFSPathTuple(f);
+        /*
+        Potential Bug:
+            If `recursive == true`, the recursive process may cause the underlying filesystems to change.
+            For example, if "s3a://bucket/dir1/" is mapped to "fs1://bla/", and "s3a://bucket/dir1/dir2/" is mapped to
+            "fs2://blah/" then the recursive process will fail if the path points to "s3a://bucket/" or "s3a://bucket/dir1/"
+         */
         return tuple.getFileSystem().delete(tuple.getPath(), recursive);
     }
 
