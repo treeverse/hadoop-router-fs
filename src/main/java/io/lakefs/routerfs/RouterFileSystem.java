@@ -56,7 +56,7 @@ public class RouterFileSystem extends FileSystem {
             defaultToScheme = defaultFromScheme + DEFAULT_FS_SCHEME_SUFFIX;
         }
         conf.set("fs." + defaultToScheme + ".impl", defaultFsConf.getValue());
-        this.setConf(conf);
+        setConf(conf);
         super.initialize(name, conf);
         if(this.pathMapper == null) {
             this.pathMapper = new PathMapper(conf, defaultFromScheme, defaultToScheme);
@@ -137,7 +137,7 @@ public class RouterFileSystem extends FileSystem {
         FileSystemPathTuple srcTuple = generateFSPathTuple(src);
         FileSystemPathTuple dstTuple = generateFSPathTuple(dst);
         if(!srcTuple.getFileSystem().equals(dstTuple.getFileSystem())) {
-            LOG.warn("Cannot rename paths from different FileSystems");
+            LOG.warn("Cannot rename between different underlying FileSystems");
             return false;
         }
         return srcTuple.getFileSystem().rename(srcTuple.getPath(), this.pathMapper.mapPath(dst));
