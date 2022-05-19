@@ -230,7 +230,7 @@ public class PathMapper {
             }
             this.fromScheme = srcConfig.getGroupScheme();
             if (!defaultMapping) {
-                if (srcConfig.getPriority().intValue() != dstConfig.getPriority().intValue()) {
+                if (srcConfig.getPriority() != dstConfig.getPriority()) {
                     LOG.error("src and dst indices must match, cannot create PathMapping. src: {}, dst: {}", srcConfig.getPriority(), dstConfig.getPriority());
                 }
                 this.priority = srcConfig.getPriority();
@@ -262,14 +262,16 @@ public class PathMapper {
     @Getter
     private static class MappingConfig {
         private final MappingConfigType type;
-        private final Integer priority;
+        private int priority = -1;
         private final String groupScheme;
         private final String prefix;
 
         public MappingConfig(@Nonnull MappingConfigType type, @Nullable Integer priority, @Nonnull String groupScheme,
                              @Nonnull String prefix) {
             this.type = type;
-            this.priority = priority;
+            if(priority != null) {
+                this.priority = priority;
+            }
             this.groupScheme = groupScheme;
             this.prefix = prefix;
         }
