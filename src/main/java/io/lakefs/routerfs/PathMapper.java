@@ -93,8 +93,7 @@ public class PathMapper {
                 pathMappings.add(pathMapping);
             }
         }
-        sortPathMappingsBySchemeAndIdx(pathMappings);
-        return pathMappings;
+        return sortPathMappingsBySchemeAndIdx(pathMappings);
     }
 
     /**
@@ -128,13 +127,16 @@ public class PathMapper {
     /**
      * Sort the loaded path mappings by scheme and then idx. This is required by the path mapper because
      * mapping configurations are applied in-order.
+     *
+     * @param pathMappings list of PathMappings to sort
+     * @return sorted list of PathMapping (by scheme and then priority)
      */
-    private void sortPathMappingsBySchemeAndIdx(List<PathMapping> pathMappings) {
+    private List<PathMapping> sortPathMappingsBySchemeAndIdx(List<PathMapping> pathMappings) {
         Comparator<PathMapping> bySchemeAndIndex = Comparator
                 .comparing(PathMapping::getFromScheme)
                 .thenComparing(PathMapping::getPriority);
 
-        pathMappings = pathMappings.stream()
+        return pathMappings.stream()
                 .sorted(bySchemeAndIndex)
                 .collect(Collectors.toList());
     }
@@ -224,14 +226,12 @@ public class PathMapper {
             this.srcConfig = srcConfig;
             this.dstConfig = dstConfig;
             if (!srcConfig.getGroupScheme().equals(dstConfig.getGroupScheme())) {
-                LOG.error("src and dst schemes must match, cannot create PathMapping. src:"
-                        + srcConfig.getGroupScheme() + " dst: " + dstConfig.getGroupScheme());
+                LOG.error("src and dst schemes must match, cannot create PathMapping. src: {}, dst: {}", srcConfig.getGroupScheme(), dstConfig.getGroupScheme());
             }
             this.fromScheme = srcConfig.getGroupScheme();
             if (!defaultMapping) {
                 if (srcConfig.getPriority().intValue() != dstConfig.getPriority().intValue()) {
-                    LOG.error("src and dst indices must match, cannot create PathMapping. src:"
-                            + srcConfig.getPriority() + " dst: " + dstConfig.getPriority());
+                    LOG.error("src and dst indices must match, cannot create PathMapping. src: {}, dst: {}", srcConfig.getPriority(), dstConfig.getPriority());
                 }
                 this.priority = srcConfig.getPriority();
             }
