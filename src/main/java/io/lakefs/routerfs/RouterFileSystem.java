@@ -136,7 +136,9 @@ public class RouterFileSystem extends FileSystem {
     public boolean rename(Path src, Path dst) throws IOException {
         FileSystemPathTuple srcTuple = generateFSPathTuple(src);
         FileSystemPathTuple dstTuple = generateFSPathTuple(dst);
-        if(!srcTuple.getFileSystem().equals(dstTuple.getFileSystem())) {
+        URI srcFileSystemURI = srcTuple.getFileSystem().getUri();
+        URI dstFileSystemURI = dstTuple.getFileSystem().getUri();
+        if(!srcFileSystemURI.equals(dstFileSystemURI)) {
             LOG.warn("Cannot rename between different underlying FileSystems");
             return false;
         }
