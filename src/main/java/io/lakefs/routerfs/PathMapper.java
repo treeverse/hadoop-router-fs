@@ -214,7 +214,7 @@ public class PathMapper {
 
         @Getter private final MappingConfig srcConfig;
         @Getter private final MappingConfig dstConfig;
-        @Getter private int priority;
+        @Getter private int priority = -1;
         @Getter private final String fromScheme;
 
         public PathMapping(MappingConfig srcPrefix, MappingConfig dstPrefix) {
@@ -224,13 +224,16 @@ public class PathMapper {
         public PathMapping(MappingConfig srcConfig, MappingConfig dstConfig, boolean defaultMapping) {
             this.srcConfig = srcConfig;
             this.dstConfig = dstConfig;
-            if (!srcConfig.getGroupScheme().equals(dstConfig.getGroupScheme())) {
-                LOG.error("src and dst schemes must match, cannot create PathMapping. src: {}, dst: {}", srcConfig.getGroupScheme(), dstConfig.getGroupScheme());
-            }
             this.fromScheme = srcConfig.getGroupScheme();
+
             if (!defaultMapping) {
+                if (!srcConfig.getGroupScheme().equals(dstConfig.getGroupScheme())) {
+                    LOG.error("src and dst schemes must match, cannot create PathMapping. src: {}, dst: {}", srcConfig.getGroupScheme(), dstConfig.getGroupScheme());
+                    throw new IllegalArgumentException();
+                }
                 if (srcConfig.getPriority() != dstConfig.getPriority()) {
                     LOG.error("src and dst indices must match, cannot create PathMapping. src: {}, dst: {}", srcConfig.getPriority(), dstConfig.getPriority());
+                    throw new IllegalArgumentException();
                 }
                 this.priority = srcConfig.getPriority();
             }
