@@ -210,13 +210,12 @@ public class PathMapper {
      * PathMapping represents a pair of mapping configurations, that define source and destination prefixes to
      * be replaced.
      */
-    @Getter
     private static class PathMapping {
 
-        private final MappingConfig srcConfig;
-        private final MappingConfig dstConfig;
-        private int priority;
-        private final String fromScheme;
+        @Getter private final MappingConfig srcConfig;
+        @Getter private final MappingConfig dstConfig;
+        @Getter private int priority;
+        @Getter private final String fromScheme;
 
         public PathMapping(MappingConfig srcPrefix, MappingConfig dstPrefix) {
             this(srcPrefix, dstPrefix, false);
