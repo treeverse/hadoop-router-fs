@@ -73,9 +73,9 @@ public class PathMapper {
         List<PathMapping> pathMappings = new ArrayList<>();
         Map<String, Map<Integer, List<MappingConfig>>> scheme2priority2ConfigPair = new HashMap<>();
         for (MappingConfig conf : mappingConfiguration) {
-            String fromScheme = conf.getGroupScheme();
+            String groupScheme = conf.getGroupScheme();
             int priority = conf.getPriority();
-            Map<Integer, List<MappingConfig>> priority2ConfigPair = scheme2priority2ConfigPair.computeIfAbsent(fromScheme, k -> new HashMap<>());
+            Map<Integer, List<MappingConfig>> priority2ConfigPair = scheme2priority2ConfigPair.computeIfAbsent(groupScheme, k -> new HashMap<>());
             List<MappingConfig> configPair = priority2ConfigPair.computeIfAbsent(priority, k -> new ArrayList<>());
             configPair.add(conf);
 

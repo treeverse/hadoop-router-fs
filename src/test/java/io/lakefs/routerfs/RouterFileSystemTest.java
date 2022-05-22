@@ -23,6 +23,7 @@ public class RouterFileSystemTest {
     private static final String DEFAULT_FS_SCHEME = "def";
     private static final Path PATH = new Path("some://path/");
     private static final URI uri = URI.create("scheme://authority");
+    private static final int BUFFER_SIZE = 3;
 
     private RouterFileSystem routerFileSystemUnderTest;
 
@@ -40,39 +41,30 @@ public class RouterFileSystemTest {
     }
 
     @Test
-    public void testGetUriSuccessful() {
-        URI uri = routerFileSystemUnderTest.getUri();
-        assertEquals(uri.getPath(), uri.getPath());
-    }
-
-    @Test
     public void testOpen(@Mock FSDataInputStream mockFSDataInputStream) throws IOException {
-        int bufferSize = 3;
-        when(this.mockFileSystem.open(this.mockPath, bufferSize)).thenReturn(mockFSDataInputStream);
-        FSDataInputStream result = this.routerFileSystemUnderTest.open(PATH, bufferSize);
+        when(this.mockFileSystem.open(this.mockPath, BUFFER_SIZE)).thenReturn(mockFSDataInputStream);
+        FSDataInputStream result = this.routerFileSystemUnderTest.open(PATH, BUFFER_SIZE);
         assertEquals(mockFSDataInputStream, result);
-        verify(this.mockFileSystem, times(1)).open(this.mockPath, bufferSize);
+        verify(this.mockFileSystem, times(1)).open(this.mockPath, BUFFER_SIZE);
     }
 
     @Test
     public void testCreate(@Mock FsPermission mockPermission, @Mock Progressable mockProgressable, @Mock FSDataOutputStream mockFSDataOutputStream) throws IOException {
-        int bufferSize = 3;
         short sh = 1000;
-        long lng = 20000;
+        long lng = 20000L;
         boolean overwrite = true;
-        when(this.mockFileSystem.create(this.mockPath, mockPermission, overwrite, bufferSize, sh, lng, mockProgressable)).thenReturn(mockFSDataOutputStream);
-        FSDataOutputStream result = this.routerFileSystemUnderTest.create(PATH, mockPermission, overwrite, bufferSize, sh, lng, mockProgressable);
+        when(this.mockFileSystem.create(this.mockPath, mockPermission, overwrite, BUFFER_SIZE, sh, lng, mockProgressable)).thenReturn(mockFSDataOutputStream);
+        FSDataOutputStream result = this.routerFileSystemUnderTest.create(PATH, mockPermission, overwrite, BUFFER_SIZE, sh, lng, mockProgressable);
         assertEquals(mockFSDataOutputStream, result);
-        verify(this.mockFileSystem, times(1)).create(this.mockPath, mockPermission, overwrite, bufferSize, sh, lng, mockProgressable);
+        verify(this.mockFileSystem, times(1)).create(this.mockPath, mockPermission, overwrite, BUFFER_SIZE, sh, lng, mockProgressable);
     }
 
     @Test
     public void testAppend(@Mock Progressable mockProgressable, @Mock FSDataOutputStream mockFSDataOutputStream) throws IOException {
-        int bufferSize = 3;
-        when(this.mockFileSystem.append(this.mockPath, bufferSize, mockProgressable)).thenReturn(mockFSDataOutputStream);
-        FSDataOutputStream result = this.routerFileSystemUnderTest.append(PATH, bufferSize, mockProgressable);
+        when(this.mockFileSystem.append(this.mockPath, BUFFER_SIZE, mockProgressable)).thenReturn(mockFSDataOutputStream);
+        FSDataOutputStream result = this.routerFileSystemUnderTest.append(PATH, BUFFER_SIZE, mockProgressable);
         assertEquals(mockFSDataOutputStream, result);
-        verify(this.mockFileSystem, times(1)).append(this.mockPath, bufferSize, mockProgressable);
+        verify(this.mockFileSystem, times(1)).append(this.mockPath, BUFFER_SIZE, mockProgressable);
     }
 
     @Test
