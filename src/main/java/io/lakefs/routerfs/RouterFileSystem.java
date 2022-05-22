@@ -19,15 +19,15 @@ import java.util.regex.Pattern;
 @NoArgsConstructor
 public class RouterFileSystem extends FileSystem {
 
-    public static final Logger LOG = LoggerFactory.getLogger(RouterFileSystem.class);
+    private static final Logger LOG = LoggerFactory.getLogger(RouterFileSystem.class);
     private static final String DEFAULT_FS_CONF_PATTEREN = "^routerfs\\.default\\.fs\\.(?<fromScheme>[-a-z0-9_]*)";
     private static final String DEFAULT_FS_SCHEME_REGEX_GROUP_NAME = "fromScheme";
     private static final String DEFAULT_FS_SCHEME_SUFFIX = "-default";
     private static final String DEFAULT_FS_CONF_PREFIX = "routerfs.default.fs";
 
     private PathMapper pathMapper;
-
     private Path workingDirectory;
+    private URI uri;
 
     public RouterFileSystem(PathMapper pathMapper) {
         this.pathMapper = pathMapper;
@@ -38,7 +38,7 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public URI getUri() {
-        return getWorkingDirectory().toUri();
+        return this.uri;
     }
 
     @Override
@@ -62,6 +62,7 @@ public class RouterFileSystem extends FileSystem {
             this.pathMapper = new PathMapper(conf, defaultFromScheme, defaultToScheme);
         }
         this.workingDirectory = new Path(name);
+        this.uri = name;
     }
 
     private Map.Entry<String, String> getDefaultFsConf(Configuration conf) {
