@@ -77,8 +77,10 @@ public class RouterFileSystemTest {
 
     @Test
     public void testRenameTheSameFileSystemTrue() throws IOException {
+        URI uri = URI.create("scheme://path");
         when(this.mockPathMapper.mapPath(any())).thenReturn(this.mockPath, this.mockPath);
         when(this.mockFileSystem.rename(this.mockPath, this.mockPath)).thenReturn(true);
+        when(this.mockFileSystem.getUri()).thenReturn(uri);
         Path p2 = new Path("some://other-path/");
         boolean result = this.routerFileSystemUnderTest.rename(PATH, p2);
         assertTrue(result);
@@ -86,8 +88,11 @@ public class RouterFileSystemTest {
     }
 
     @Test
-    public void testRenameDifferentFileSystemsFalse(@Mock Path secondMockedPath) throws IOException {
-        when(this.mockPathMapper.mapPath(any())).thenReturn(this.mockPath, secondMockedPath);
+    public void testRenameDifferentFileSystemsFalse() throws IOException {
+        URI uri = URI.create("scheme://path");
+        URI uri2 = URI.create("otherscheme://otherpath");
+        when(this.mockFileSystem.getUri()).thenReturn(uri, uri2);
+        when(this.mockPathMapper.mapPath(any())).thenReturn(this.mockPath, this.mockPath);
         Path p2 = new Path("some://other-path/");
         boolean result = this.routerFileSystemUnderTest.rename(PATH, p2);
         assertFalse(result);
