@@ -50,13 +50,13 @@ public class RouterFileSystemTest {
 
     @Test
     public void testCreate(@Mock FsPermission mockPermission, @Mock Progressable mockProgressable, @Mock FSDataOutputStream mockFSDataOutputStream) throws IOException {
-        short sh = 1000;
-        long lng = 20000L;
+        short replication = 1000;
+        long blockSize = 20000L;
         boolean overwrite = true;
-        when(this.mockFileSystem.create(this.mockPath, mockPermission, overwrite, BUFFER_SIZE, sh, lng, mockProgressable)).thenReturn(mockFSDataOutputStream);
-        FSDataOutputStream result = this.routerFileSystemUnderTest.create(PATH, mockPermission, overwrite, BUFFER_SIZE, sh, lng, mockProgressable);
+        when(this.mockFileSystem.create(this.mockPath, mockPermission, overwrite, BUFFER_SIZE, replication, blockSize, mockProgressable)).thenReturn(mockFSDataOutputStream);
+        FSDataOutputStream result = this.routerFileSystemUnderTest.create(PATH, mockPermission, overwrite, BUFFER_SIZE, replication, blockSize, mockProgressable);
         assertEquals(mockFSDataOutputStream, result);
-        verify(this.mockFileSystem, times(1)).create(this.mockPath, mockPermission, overwrite, BUFFER_SIZE, sh, lng, mockProgressable);
+        verify(this.mockFileSystem, times(1)).create(this.mockPath, mockPermission, overwrite, BUFFER_SIZE, replication, blockSize, mockProgressable);
     }
 
     @Test
