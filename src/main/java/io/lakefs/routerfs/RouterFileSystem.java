@@ -239,18 +239,17 @@ public class RouterFileSystem extends FileSystem {
     }
 
     private FileSystemPathTuple generateFSPathTuple(Path p) throws IOException {
-        p = createAbsolutePath(p);
+        p = createSchemedPath(p);
         Path mappedPath = this.pathMapper.mapPath(p);
         FileSystem fs = mappedPath.getFileSystem(getConf());
         return new FileSystemPathTuple(fs, mappedPath);
     }
 
-    private Path createAbsolutePath(Path p) {
-        if(p.isAbsolute()) {
-            return p;
-        }
-        else {
+    private Path createSchemedPath(Path p) {
+        String pathScheme = p.toUri() != null ? p.toUri().getScheme() : null;
+        if (pathScheme == null || pathScheme.isEmpty()) {
             return new Path(getWorkingDirectory(), p);
         }
+        return p;
     }
 }
