@@ -1,6 +1,6 @@
 package io.lakefs.routerfs;
 
-import io.lakefs.routerfs.dto.FileSystemPathTuple;
+import io.lakefs.routerfs.dto.FileSystemPathPair;
 import lombok.NoArgsConstructor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -82,7 +82,7 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-        FileSystemPathTuple tuple = generateFSPathTuple(f);
+        FileSystemPathPair tuple = generateFSPathTuple(f);
         return tuple.getFileSystem().open(tuple.getPath(), bufferSize);
     }
 
@@ -106,7 +106,7 @@ public class RouterFileSystem extends FileSystem {
                                      boolean overwrite, int bufferSize,
                                      short replication, long blockSize,
                                      Progressable progress) throws IOException {
-        FileSystemPathTuple tuple = generateFSPathTuple(f);
+        FileSystemPathPair tuple = generateFSPathTuple(f);
         return tuple.getFileSystem().create(tuple.getPath(), permission, overwrite, bufferSize, replication, blockSize, progress);
     }
 
@@ -120,7 +120,7 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FSDataOutputStream append(Path f, int bufferSize, Progressable progress) throws IOException {
-        FileSystemPathTuple tuple = generateFSPathTuple(f);
+        FileSystemPathPair tuple = generateFSPathTuple(f);
         return tuple.getFileSystem().append(tuple.getPath(), bufferSize, progress);
     }
 
@@ -135,8 +135,8 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public boolean rename(Path src, Path dst) throws IOException {
-        FileSystemPathTuple srcTuple = generateFSPathTuple(src);
-        FileSystemPathTuple dstTuple = generateFSPathTuple(dst);
+        FileSystemPathPair srcTuple = generateFSPathTuple(src);
+        FileSystemPathPair dstTuple = generateFSPathTuple(dst);
         URI srcFileSystemURI = srcTuple.getFileSystem().getUri();
         URI dstFileSystemURI = dstTuple.getFileSystem().getUri();
         if(!srcFileSystemURI.equals(dstFileSystemURI)) {
@@ -158,7 +158,7 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public boolean delete(Path f, boolean recursive) throws IOException {
-        FileSystemPathTuple tuple = generateFSPathTuple(f);
+        FileSystemPathPair tuple = generateFSPathTuple(f);
         /*
         Potential Bug:
             If `recursive == true`, the recursive process may cause the underlying filesystems to change.
@@ -179,7 +179,7 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FileStatus[] listStatus(Path f) throws FileNotFoundException, IOException {
-        FileSystemPathTuple tuple = generateFSPathTuple(f);
+        FileSystemPathPair tuple = generateFSPathTuple(f);
         return tuple.getFileSystem().listStatus(tuple.getPath());
     }
 
@@ -192,7 +192,7 @@ public class RouterFileSystem extends FileSystem {
     @Override
     public void setWorkingDirectory(Path new_dir) {
         try {
-            FileSystemPathTuple tuple = generateFSPathTuple(new_dir);
+            FileSystemPathPair tuple = generateFSPathTuple(new_dir);
             tuple.getFileSystem().setWorkingDirectory(tuple.getPath());
             this.workingDirectory = new_dir;
         } catch (IOException e) {
@@ -220,7 +220,7 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public boolean mkdirs(Path f, FsPermission permission) throws IOException {
-        FileSystemPathTuple tuple = generateFSPathTuple(f);
+        FileSystemPathPair tuple = generateFSPathTuple(f);
         return tuple.getFileSystem().mkdirs(tuple.getPath(), permission);
     }
 
@@ -234,15 +234,15 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
-        FileSystemPathTuple tuple = generateFSPathTuple(f);
+        FileSystemPathPair tuple = generateFSPathTuple(f);
         return tuple.getFileSystem().getFileStatus(tuple.getPath());
     }
 
-    private FileSystemPathTuple generateFSPathTuple(Path p) throws IOException {
+    private FileSystemPathPair generateFSPathTuple(Path p) throws IOException {
         p = createSchemedPath(p);
         Path mappedPath = this.pathMapper.mapPath(p);
         FileSystem fs = mappedPath.getFileSystem(getConf());
-        return new FileSystemPathTuple(fs, mappedPath);
+        return new FileSystemPathPair(fs, mappedPath);
     }
 
     private Path createSchemedPath(Path p) {
