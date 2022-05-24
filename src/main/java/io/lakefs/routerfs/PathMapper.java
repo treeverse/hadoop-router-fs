@@ -42,7 +42,7 @@ public class PathMapper {
         Objects.requireNonNull(defaultFromScheme);
         Objects.requireNonNull(defaultToScheme);
         this.pathMappings = new ArrayList<>();
-        defaultMapping = createDefaultMapping(defaultFromScheme, defaultToScheme);
+        this.defaultMapping = createDefaultMapping(defaultFromScheme, defaultToScheme);
         loadMappingConfig(conf);
     }
 
@@ -248,7 +248,7 @@ public class PathMapper {
          */
         public boolean isAppropriateMapping(Path p) {
             String str = p.toString();
-            return str.startsWith(srcConfig.getPrefix());
+            return str.startsWith(this.srcConfig.getPrefix());
         }
 
         @Override
