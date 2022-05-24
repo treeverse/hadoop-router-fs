@@ -20,7 +20,7 @@ import java.util.regex.Pattern;
 public class RouterFileSystem extends FileSystem {
 
     private static final Logger LOG = LoggerFactory.getLogger(RouterFileSystem.class);
-    private static final String DEFAULT_FS_CONF_PATTEREN = "^routerfs\\.default\\.fs\\.(?<fromScheme>[-a-z0-9_]*)";
+    private static final String DEFAULT_FS_CONF_PATTERN = "^routerfs\\.default\\.fs\\.(?<fromScheme>[-a-z0-9_]*)";
     private static final String DEFAULT_FS_SCHEME_REGEX_GROUP_NAME = "fromScheme";
     private static final String DEFAULT_FS_SCHEME_SUFFIX = "-default";
     private static final String DEFAULT_FS_CONF_PREFIX = "routerfs.default.fs";
@@ -47,7 +47,7 @@ public class RouterFileSystem extends FileSystem {
         // the default filesystem. e.g., the method converts a configuration of the form
         // routerfs.default.fs.s3a=S3AFileSystem into fs.s3a-default.impl=S3AFileSystem.
         Map.Entry<String, String> defaultFsConf = getDefaultFsConf(conf);
-        Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTEREN);
+        Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTERN);
         Matcher matcher = pattern.matcher(defaultFsConf.getKey());
         String defaultFromScheme = null;
         String defaultToScheme = null;
