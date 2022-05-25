@@ -1,5 +1,7 @@
 package io.lakefs.routerfs;
 
+import io.lakefs.routerfs.dto.FileSystemPathPair;
+import lombok.NoArgsConstructor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -14,23 +16,29 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@NoArgsConstructor
 public class RouterFileSystem extends FileSystem {
 
-    public static final Logger LOG = LoggerFactory.getLogger(RouterFileSystem.class);
-    private static final String DEFAULT_FS_CONF_PATTEREN = "^routerfs\\.default\\.fs\\.(?<fromScheme>[-a-z0-9_]*)";
+    private static final Logger LOG = LoggerFactory.getLogger(RouterFileSystem.class);
+    private static final String DEFAULT_FS_CONF_PATTERN = "^routerfs\\.default\\.fs\\.(?<fromScheme>[-a-z0-9_]*)";
     private static final String DEFAULT_FS_SCHEME_REGEX_GROUP_NAME = "fromScheme";
     private static final String DEFAULT_FS_SCHEME_SUFFIX = "-default";
     private static final String DEFAULT_FS_CONF_PREFIX = "routerfs.default.fs";
 
     private PathMapper pathMapper;
+    private Path workingDirectory;
+    private URI uri;
+
+    public RouterFileSystem(PathMapper pathMapper) {
+        this.pathMapper = pathMapper;
+    }
 
     /**
      * Returns a URI whose scheme and authority identify this FileSystem.
      */
     @Override
     public URI getUri() {
-        //TODO (Tals): what should be the URI
-        return null;
+        return this.uri;
     }
 
     @Override
@@ -39,7 +47,7 @@ public class RouterFileSystem extends FileSystem {
         // the default filesystem. e.g., the method converts a configuration of the form
         // routerfs.default.fs.s3a=S3AFileSystem into fs.s3a-default.impl=S3AFileSystem.
         Map.Entry<String, String> defaultFsConf = getDefaultFsConf(conf);
-        Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTEREN);
+        Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTERN);
         Matcher matcher = pattern.matcher(defaultFsConf.getKey());
         String defaultFromScheme = null;
         String defaultToScheme = null;
@@ -48,8 +56,13 @@ public class RouterFileSystem extends FileSystem {
             defaultToScheme = defaultFromScheme + DEFAULT_FS_SCHEME_SUFFIX;
         }
         conf.set("fs." + defaultToScheme + ".impl", defaultFsConf.getValue());
+        setConf(conf);
         super.initialize(name, conf);
-        this.pathMapper = new PathMapper(conf, defaultFromScheme, defaultToScheme);
+        if(this.pathMapper == null) {
+            this.pathMapper = new PathMapper(conf, defaultFromScheme, defaultToScheme);
+        }
+        this.workingDirectory = new Path(name);
+        this.uri = name;
     }
 
     private Map.Entry<String, String> getDefaultFsConf(Configuration conf) {
@@ -69,11 +82,8 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
-        return null;
-    }
-
-    private Path translatePath(Path f) {
-        return null;
+        FileSystemPathPair tuple = generateFSPathTuple(f);
+        return tuple.getFileSystem().open(tuple.getPath(), bufferSize);
     }
 
     /**
@@ -92,8 +102,12 @@ public class RouterFileSystem extends FileSystem {
      * @see #setPermission(Path, FsPermission)
      */
     @Override
-    public FSDataOutputStream create(Path f, FsPermission permission, boolean overwrite, int bufferSize, short replication, long blockSize, Progressable progress) throws IOException {
-        return null;
+    public FSDataOutputStream create(Path f, FsPermission permission,
+                                     boolean overwrite, int bufferSize,
+                                     short replication, long blockSize,
+                                     Progressable progress) throws IOException {
+        FileSystemPathPair tuple = generateFSPathTuple(f);
+        return tuple.getFileSystem().create(tuple.getPath(), permission, overwrite, bufferSize, replication, blockSize, progress);
     }
 
     /**
@@ -106,7 +120,8 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FSDataOutputStream append(Path f, int bufferSize, Progressable progress) throws IOException {
-        return null;
+        FileSystemPathPair tuple = generateFSPathTuple(f);
+        return tuple.getFileSystem().append(tuple.getPath(), bufferSize, progress);
     }
 
     /**
@@ -120,7 +135,15 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public boolean rename(Path src, Path dst) throws IOException {
-        return false;
+        FileSystemPathPair srcTuple = generateFSPathTuple(src);
+        FileSystemPathPair dstTuple = generateFSPathTuple(dst);
+        URI srcFileSystemURI = srcTuple.getFileSystem().getUri();
+        URI dstFileSystemURI = dstTuple.getFileSystem().getUri();
+        if(!srcFileSystemURI.equals(dstFileSystemURI)) {
+            LOG.warn("Cannot rename between different underlying FileSystems");
+            return false;
+        }
+        return srcTuple.getFileSystem().rename(srcTuple.getPath(), this.pathMapper.mapPath(dst));
     }
 
     /**
@@ -135,7 +158,14 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public boolean delete(Path f, boolean recursive) throws IOException {
-        return false;
+        FileSystemPathPair tuple = generateFSPathTuple(f);
+        /*
+        Potential Bug:
+            If `recursive == true`, the recursive process may cause the underlying filesystems to change.
+            For example, if "s3a://bucket/dir1/" is mapped to "fs1://bla/", and "s3a://bucket/dir1/dir2/" is mapped to
+            "fs2://blah/" then the recursive process will fail if the path points to "s3a://bucket/" or "s3a://bucket/dir1/"
+         */
+        return tuple.getFileSystem().delete(tuple.getPath(), recursive);
     }
 
     /**
@@ -149,7 +179,8 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FileStatus[] listStatus(Path f) throws FileNotFoundException, IOException {
-        return new FileStatus[0];
+        FileSystemPathPair tuple = generateFSPathTuple(f);
+        return tuple.getFileSystem().listStatus(tuple.getPath());
     }
 
     /**
@@ -160,7 +191,13 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public void setWorkingDirectory(Path new_dir) {
-
+        try {
+            FileSystemPathPair tuple = generateFSPathTuple(new_dir);
+            tuple.getFileSystem().setWorkingDirectory(tuple.getPath());
+            this.workingDirectory = new_dir;
+        } catch (IOException e) {
+            LOG.error("Failed setting a working directory with exception:\n{}", e.getLocalizedMessage());
+        }
     }
 
     /**
@@ -170,7 +207,7 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public Path getWorkingDirectory() {
-        return null;
+        return this.workingDirectory;
     }
 
     /**
@@ -183,7 +220,8 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public boolean mkdirs(Path f, FsPermission permission) throws IOException {
-        return false;
+        FileSystemPathPair tuple = generateFSPathTuple(f);
+        return tuple.getFileSystem().mkdirs(tuple.getPath(), permission);
     }
 
     /**
@@ -196,10 +234,22 @@ public class RouterFileSystem extends FileSystem {
      */
     @Override
     public FileStatus getFileStatus(Path f) throws IOException {
-//        Path mappedPath = pathMapper.mapPath(f);
-//        Configuration conf = getConf();
-//        FileSystem fs = mappedPath.getFileSystem(conf);
-//        return fs.getFileStatus(mappedPath);
-        return null;
+        FileSystemPathPair tuple = generateFSPathTuple(f);
+        return tuple.getFileSystem().getFileStatus(tuple.getPath());
+    }
+
+    private FileSystemPathPair generateFSPathTuple(Path p) throws IOException {
+        p = createSchemedPath(p);
+        Path mappedPath = this.pathMapper.mapPath(p);
+        FileSystem fs = mappedPath.getFileSystem(getConf());
+        return new FileSystemPathPair(fs, mappedPath);
+    }
+
+    private Path createSchemedPath(Path p) {
+        String pathScheme = p.toUri() != null ? p.toUri().getScheme() : null;
+        if (pathScheme == null || pathScheme.isEmpty()) {
+            return new Path(getWorkingDirectory(), p);
+        }
+        return p;
     }
 }

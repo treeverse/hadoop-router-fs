@@ -1,5 +1,6 @@
 package io.lakefs.routerfs;
 
+import lombok.Getter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -35,13 +36,13 @@ public class PathMapper {
     }
 
     private List<PathMapping> pathMappings;
-    private PathMapping defaultMapping;
+    private final PathMapping defaultMapping;
 
     public PathMapper(Configuration conf, String defaultFromScheme, String defaultToScheme) throws IOException {
         Objects.requireNonNull(defaultFromScheme);
         Objects.requireNonNull(defaultToScheme);
         this.pathMappings = new ArrayList<>();
-        defaultMapping = createDefaultMapping(defaultFromScheme, defaultToScheme);
+        this.defaultMapping = createDefaultMapping(defaultFromScheme, defaultToScheme);
         loadMappingConfig(conf);
     }
 
@@ -53,7 +54,7 @@ public class PathMapper {
 
     private void loadMappingConfig(Configuration conf) throws InvalidPropertiesFormatException {
         List<MappingConfig> mappingConfigurations = parseMappingConfig(conf);
-        populatePathMappings(mappingConfigurations);
+        this.pathMappings = populatePathMappings(mappingConfigurations);
 
         if (LOG.isDebugEnabled()) {
             logLoadedMappings();
@@ -68,21 +69,14 @@ public class PathMapper {
      *
      * @param mappingConfiguration the configurations to create path mapping from
      */
-    private void populatePathMappings(List<MappingConfig> mappingConfiguration) throws InvalidPropertiesFormatException {
+    private List<PathMapping> populatePathMappings(List<MappingConfig> mappingConfiguration) throws InvalidPropertiesFormatException {
+        List<PathMapping> pathMappings = new ArrayList<>();
         Map<String, Map<Integer, List<MappingConfig>>> scheme2priority2ConfigPair = new HashMap<>();
         for (MappingConfig conf : mappingConfiguration) {
-            String fromScheme = conf.getFromScheme();
+            String groupScheme = conf.getGroupScheme();
             int priority = conf.getPriority();
-            Map<Integer, List<MappingConfig>> priority2ConfigPair = scheme2priority2ConfigPair.get(fromScheme);
-            if (priority2ConfigPair == null) {
-                priority2ConfigPair = new HashMap();
-                scheme2priority2ConfigPair.put(fromScheme, priority2ConfigPair);
-            }
-            List<MappingConfig> configPair = priority2ConfigPair.get(priority);
-            if (configPair == null) {
-                configPair = new ArrayList<>();
-                priority2ConfigPair.put(priority, configPair);
-            }
+            Map<Integer, List<MappingConfig>> priority2ConfigPair = scheme2priority2ConfigPair.computeIfAbsent(groupScheme, k -> new HashMap<>());
+            List<MappingConfig> configPair = priority2ConfigPair.computeIfAbsent(priority, k -> new ArrayList<>());
             configPair.add(conf);
 
             // Create path mapping when we've collected a pair.
@@ -99,7 +93,7 @@ public class PathMapper {
                 pathMappings.add(pathMapping);
             }
         }
-        sortPathMappingsBySchemeAndIdx();
+        return sortPathMappingsBySchemeAndIdx(pathMappings);
     }
 
     /**
@@ -111,7 +105,7 @@ public class PathMapper {
             if (hadoopConf.getKey().startsWith(MAPPING_CONFIG_PREFIX)) {
                 MappingConfig mappingConf = parseMappingConf(hadoopConf);
                 mappingConfig.add(mappingConf);
-                LOG.trace("Loaded and parsed mapping config with key:%s and value:%s", hadoopConf.getKey(), hadoopConf.getValue());
+                LOG.trace("Loaded and parsed mapping config with key:{} and value:{}", hadoopConf.getKey(), hadoopConf.getValue());
             }
         }
         return mappingConfig;
@@ -126,20 +120,23 @@ public class PathMapper {
             LOG.debug(pm.toString());
         }
         if (defaultMapping != null) {
-            LOG.debug("defaultMapping: " + defaultMapping.toString());
+            LOG.debug("defaultMapping: " + defaultMapping);
         }
     }
 
     /**
      * Sort the loaded path mappings by scheme and then idx. This is required by the path mapper because
      * mapping configurations are applied in-order.
+     *
+     * @param pathMappings list of PathMappings to sort
+     * @return sorted list of PathMapping (by scheme and then priority)
      */
-    private void sortPathMappingsBySchemeAndIdx() {
+    private List<PathMapping> sortPathMappingsBySchemeAndIdx(List<PathMapping> pathMappings) {
         Comparator<PathMapping> bySchemeAndIndex = Comparator
                 .comparing(PathMapping::getFromScheme)
                 .thenComparing(PathMapping::getPriority);
 
-        pathMappings = pathMappings.stream()
+        return pathMappings.stream()
                 .sorted(bySchemeAndIndex)
                 .collect(Collectors.toList());
     }
@@ -153,7 +150,7 @@ public class PathMapper {
      */
     private MappingConfig parseMappingConf(Map.Entry<String, String> hadoopConf) throws InvalidPropertiesFormatException {
         String fromFSScheme;
-        int mappingPriority = 0;
+        int mappingPriority;
         MappingConfigType type;
         String key = hadoopConf.getKey();
 
@@ -183,7 +180,7 @@ public class PathMapper {
     public Path mapPath(Path origPath) {
         PathMapping pathMapping = findAppropriatePathMapping(origPath);
         if (pathMapping == null) {
-            LOG.trace("Can't find a matching path mapping for %s, using default mapping", origPath);
+            LOG.trace("Can't find a matching path mapping for {}, using default mapping", origPath);
             pathMapping = defaultMapping;
         }
         return convertPath(origPath, pathMapping);
@@ -199,14 +196,14 @@ public class PathMapper {
     private Path convertPath(Path path, PathMapping pathMapping) {
         String str = path.toString();
         String convertedPath = str.replaceFirst(pathMapping.getSrcConfig().getPrefix(), pathMapping.getDstConfig().getPrefix());
-        LOG.trace("Converted % to % using path mapping %s", path, convertedPath,  pathMapping);
+        LOG.trace("Converted {} to {} using path mapping {}", path, convertedPath,  pathMapping);
         return new Path(convertedPath);
     }
 
     private PathMapping findAppropriatePathMapping(Path path) {
         Optional<PathMapping> appropriateMap = pathMappings.stream()
                 .filter(pm -> pm.isAppropriateMapping(path)).findFirst();
-        return appropriateMap.isPresent() ? appropriateMap.get() : null;
+        return appropriateMap.orElse(null);
     }
 
     /**
@@ -215,34 +212,28 @@ public class PathMapper {
      */
     private static class PathMapping {
 
-        private MappingConfig srcConfig;
-        private MappingConfig dstConfig;
-        private int priority;
-        private String fromScheme;
-        private boolean defaultMapping;
+        @Getter private final MappingConfig srcConfig;
+        @Getter private final MappingConfig dstConfig;
+        @Getter private int priority = -1;
+        @Getter private final String fromScheme;
 
         public PathMapping(MappingConfig srcPrefix, MappingConfig dstPrefix) {
             this(srcPrefix, dstPrefix, false);
         }
 
         public PathMapping(MappingConfig srcConfig, MappingConfig dstConfig, boolean defaultMapping) {
-            this.defaultMapping = defaultMapping;
             this.srcConfig = srcConfig;
             this.dstConfig = dstConfig;
-            this.fromScheme = srcConfig.getFromScheme();
+            this.fromScheme = srcConfig.getGroupScheme();
 
-            if (!this.defaultMapping) {
-                if (!srcConfig.getFromScheme().equals(dstConfig.getFromScheme())) {
-                    LOG.error("src and dst schemes must match, cannot create PathMapping. src: {}, dst: {}.",
-                            srcConfig.getFromScheme(),
-                            dstConfig.getFromScheme()
-                    );
+            if (!defaultMapping) {
+                if (!srcConfig.getGroupScheme().equals(dstConfig.getGroupScheme())) {
+                    LOG.error("src and dst schemes must match, cannot create PathMapping. src: {}, dst: {}", srcConfig.getGroupScheme(), dstConfig.getGroupScheme());
+                    throw new IllegalArgumentException();
                 }
                 if (srcConfig.getPriority() != dstConfig.getPriority()) {
-                    LOG.error("src and dst indices must match, cannot create PathMapping. src: {}, dst: {}.",
-                            srcConfig.getPriority(),
-                            dstConfig.getPriority()
-                    );
+                    LOG.error("src and dst indices must match, cannot create PathMapping. src: {}, dst: {}", srcConfig.getPriority(), dstConfig.getPriority());
+                    throw new IllegalArgumentException();
                 }
                 this.priority = srcConfig.getPriority();
             }
@@ -257,23 +248,7 @@ public class PathMapper {
          */
         public boolean isAppropriateMapping(Path p) {
             String str = p.toString();
-            return str.startsWith(srcConfig.getPrefix());
-        }
-
-        public MappingConfig getSrcConfig() {
-            return srcConfig;
-        }
-
-        public MappingConfig getDstConfig() {
-            return dstConfig;
-        }
-
-        public String getFromScheme() {
-            return fromScheme;
-        }
-
-        public int getPriority() {
-            return priority;
+            return str.startsWith(this.srcConfig.getPrefix());
         }
 
         @Override
@@ -286,40 +261,27 @@ public class PathMapper {
      * A class that represents a parsed Path mapping configurations supported by RouterFileSystem.
      * Mapping configuration form is: routerfs.mapping.${fromFsScheme}.${mappingIdx}.${replace/with}=prefix.
      */
+    @Getter
     private static class MappingConfig {
-        private MappingConfigType type;
-        private Integer priority;
-        private String fromScheme;
-        private String prefix;
+        private final MappingConfigType type;
+        private int priority = -1;
+        private final String groupScheme;
+        private final String prefix;
 
-        public MappingConfig(@Nonnull MappingConfigType type, @Nullable Integer priority, @Nonnull String fromScheme,
+        public MappingConfig(@Nonnull MappingConfigType type, @Nullable Integer priority, @Nonnull String groupScheme,
                              @Nonnull String prefix) {
             this.type = type;
-            this.priority = priority;
-            this.fromScheme = fromScheme;
+            if(priority != null) {
+                this.priority = priority;
+            }
+            this.groupScheme = groupScheme;
             this.prefix = prefix;
         }
 
         @Override
         public String toString() {
-            return "toScheme=" + this.fromScheme + " type=" + this.type.name() + " index=" + this.priority + " value=" +
+            return "toScheme=" + this.groupScheme + " type=" + this.type.name() + " index=" + this.priority + " value=" +
                     this.prefix;
-        }
-
-        public String getFromScheme() {
-            return fromScheme;
-        }
-
-        public int getPriority() {
-            return priority;
-        }
-
-        public MappingConfigType getType() {
-            return type;
-        }
-
-        public String getPrefix() {
-            return prefix;
         }
     }
 }
