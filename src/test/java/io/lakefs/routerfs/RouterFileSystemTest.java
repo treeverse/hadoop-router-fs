@@ -19,11 +19,12 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class RouterFileSystemTest {
-    private static final String DEFAULT_FS_CONF_KEY_FORMAT = "routerfs.default.fs.%s";
-    private static final String DEFAULT_FS_SCHEME = "def";
+    private static final String DEFAULT_FS_CONF_KEY = "routerfs.default.fs.def";
+    private static final String DEFAULT_FS_IMPL_KEY = "fs.def.impl";
     private static final Path PATH = new Path("some://path/");
     private static final URI uri = URI.create("scheme://authority");
     private static final int BUFFER_SIZE = 3;
+    private static Configuration configuration;
 
     private RouterFileSystem routerFileSystemUnderTest;
 
@@ -35,9 +36,27 @@ public class RouterFileSystemTest {
     private void setUp() throws IOException {
         lenient().when(this.mockPathMapper.mapPath(any())).thenReturn(this.mockPath);
         this.routerFileSystemUnderTest = new RouterFileSystem(this.mockPathMapper);
-        Configuration configuration = generateConfiguration();
+        configuration = generateConfiguration();
         lenient().when(this.mockPath.getFileSystem(configuration)).thenReturn(this.mockFileSystem);
         this.routerFileSystemUnderTest.initialize(uri, configuration);
+    }
+
+    @Test
+    public void testInitializeWithMissingDefaultMappingFail() {
+        configuration.set("fs.somescheme.impl", routerFileSystemUnderTest.getClass().getCanonicalName());
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            routerFileSystemUnderTest.initialize(uri, configuration);
+        });
+        assertTrue(exception.getMessage().contains("There are missing default mappings configurations"));
+    }
+
+    @Test
+    public void testInitializeWithNoDefaultMappingFail() {
+        configuration.unset(DEFAULT_FS_CONF_KEY);
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            routerFileSystemUnderTest.initialize(uri, configuration);
+        });
+        assertTrue(exception.getMessage().contains("No default filesystem configurations were specified"));
     }
 
     @Test
@@ -128,8 +147,8 @@ public class RouterFileSystemTest {
 
     private Configuration generateConfiguration() {
         Configuration config = new Configuration();
-        String defaultFSMappingKey = String.format(DEFAULT_FS_CONF_KEY_FORMAT, DEFAULT_FS_SCHEME);
-        config.set(defaultFSMappingKey, "doesntMatter");
+        config.set(DEFAULT_FS_CONF_KEY, "doesntMatter");
+        config.set(DEFAULT_FS_IMPL_KEY, routerFileSystemUnderTest.getClass().getCanonicalName());
         return config;
     }
 }

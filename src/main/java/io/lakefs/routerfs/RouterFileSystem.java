@@ -13,10 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -25,9 +22,11 @@ public class RouterFileSystem extends FileSystem {
 
     private static final Logger LOG = LoggerFactory.getLogger(RouterFileSystem.class);
     private static final String DEFAULT_FS_CONF_PATTERN = "^routerfs\\.default\\.fs\\.(?<fromScheme>[-a-z0-9_]*)";
+    private static final String DEFAULT_FS_IMPL_PATTERN = "^fs\\.(?<fromScheme>[-a-z0-9_]*)\\.impl";
     private static final String DEFAULT_FS_SCHEME_REGEX_GROUP_NAME = "fromScheme";
     private static final String DEFAULT_FS_SCHEME_SUFFIX = "-default";
     private static final String DEFAULT_FS_CONF_PREFIX = "routerfs.default.fs";
+    private static final String FS_IMPL_KEY_FORMAT = "fs.%s.impl";
 
     private PathMapper pathMapper;
     private Path workingDirectory;
@@ -47,8 +46,8 @@ public class RouterFileSystem extends FileSystem {
 
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
-        // Find RouterFs' default file system configuration, and create a hadoop configuration that maps a new scheme to
-        // the default filesystem. e.g., the method converts a configuration of the form
+        // Find RouterFs' default file system configurations, and create a hadoop configuration that maps a new scheme to
+        // the corresponding default filesystem. e.g., the method converts a configuration of the form
         // routerfs.default.fs.s3a=S3AFileSystem into fs.s3a-default.impl=S3AFileSystem.
         Map<String, String> defaultFsConfs = getDefaultFsConf(conf);
         List<DefaultSchemeTranslation> defaultSchemePairsSchemeTranslation = new ArrayList<>();
@@ -58,7 +57,7 @@ public class RouterFileSystem extends FileSystem {
             if(matcher.find()) {
                 String defaultFromScheme = matcher.group(DEFAULT_FS_SCHEME_REGEX_GROUP_NAME);
                 String defaultToScheme = defaultFromScheme + DEFAULT_FS_SCHEME_SUFFIX;
-                conf.set("fs." + defaultToScheme + ".impl", defaultFsConfs.get(defaultKey));
+                conf.set(String.format(FS_IMPL_KEY_FORMAT, defaultToScheme), defaultFsConfs.get(defaultKey));
                 defaultSchemePairsSchemeTranslation.add(new DefaultSchemeTranslation(defaultFromScheme, defaultToScheme));
             }
         }
@@ -72,19 +71,39 @@ public class RouterFileSystem extends FileSystem {
     }
 
     private Map<String, String> getDefaultFsConf(Configuration conf) {
-        Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTERN);
+        Pattern defaultMappingPattern = Pattern.compile(DEFAULT_FS_CONF_PATTERN);
+        Pattern implMappingPattern = Pattern.compile(DEFAULT_FS_IMPL_PATTERN);
+        Set<String> mappedImplSchemes = new HashSet<>();
+        Set<String> defaultSchemes = new HashSet<>();
         Map<String, String> defaultConf = new HashMap<>();
         for (Map.Entry<String, String> hadoopConf : conf) {
             String confKey = hadoopConf.getKey();
-            Matcher defaultConfKeyMatcher = pattern.matcher(confKey);
+            Matcher defaultConfKeyMatcher = defaultMappingPattern.matcher(confKey);
             if (confKey.startsWith(DEFAULT_FS_CONF_PREFIX) && defaultConfKeyMatcher.find()) {
                 defaultConf.put(hadoopConf.getKey(), hadoopConf.getValue());
+                defaultSchemes.add(defaultConfKeyMatcher.group(DEFAULT_FS_SCHEME_REGEX_GROUP_NAME));
+            }
+            else {
+                Matcher implConfKeyMatcher = implMappingPattern.matcher(confKey);
+                if(implConfKeyMatcher.find()) {
+                    String confValue = hadoopConf.getValue();
+                    if (confValue.equals(this.getClass().getCanonicalName())) {
+                        mappedImplSchemes.add(implConfKeyMatcher.group(DEFAULT_FS_SCHEME_REGEX_GROUP_NAME));
+                    }
+                }
             }
         }
-        if(defaultConf.isEmpty()) {
-            throw new IllegalArgumentException("Missing default file system configuration");
-        }
+        validateDefaultMappings(defaultSchemes, mappedImplSchemes);
         return defaultConf;
+    }
+
+    private void validateDefaultMappings(Set<String> defaultSchemes, Set<String> mappedImplSchemes) {
+        if(defaultSchemes.isEmpty()) {
+            throw new IllegalArgumentException("No default filesystem configurations were specified");
+        }
+        if(!defaultSchemes.containsAll(mappedImplSchemes)) {
+            throw new IllegalArgumentException("There are missing default mappings configurations");
+        }
     }
 
     /**
