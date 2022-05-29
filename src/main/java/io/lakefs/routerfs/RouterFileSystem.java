@@ -1,5 +1,6 @@
 package io.lakefs.routerfs;
 
+import io.lakefs.routerfs.dto.DefaultSchemeTranslation;
 import io.lakefs.routerfs.dto.FileSystemPathPair;
 import lombok.NoArgsConstructor;
 import org.apache.hadoop.conf.Configuration;
@@ -12,6 +13,9 @@ import org.slf4j.LoggerFactory;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -46,32 +50,41 @@ public class RouterFileSystem extends FileSystem {
         // Find RouterFs' default file system configuration, and create a hadoop configuration that maps a new scheme to
         // the default filesystem. e.g., the method converts a configuration of the form
         // routerfs.default.fs.s3a=S3AFileSystem into fs.s3a-default.impl=S3AFileSystem.
-        Map.Entry<String, String> defaultFsConf = getDefaultFsConf(conf);
-        Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTERN);
-        Matcher matcher = pattern.matcher(defaultFsConf.getKey());
-        String defaultFromScheme = null;
-        String defaultToScheme = null;
-        if (matcher.find()) {
-            defaultFromScheme = matcher.group(DEFAULT_FS_SCHEME_REGEX_GROUP_NAME);
-            defaultToScheme = defaultFromScheme + DEFAULT_FS_SCHEME_SUFFIX;
+        Map<String, String> defaultFsConfs = getDefaultFsConf(conf);
+        List<DefaultSchemeTranslation> defaultSchemePairsSchemeTranslation = new ArrayList<>();
+        for(String defaultKey: defaultFsConfs.keySet()) {
+            Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTERN);
+            Matcher matcher = pattern.matcher(defaultKey);
+            if(matcher.find()) {
+                String defaultFromScheme = matcher.group(DEFAULT_FS_SCHEME_REGEX_GROUP_NAME);
+                String defaultToScheme = defaultFromScheme + DEFAULT_FS_SCHEME_SUFFIX;
+                conf.set("fs." + defaultToScheme + ".impl", defaultFsConfs.get(defaultKey));
+                defaultSchemePairsSchemeTranslation.add(new DefaultSchemeTranslation(defaultFromScheme, defaultToScheme));
+            }
         }
-        conf.set("fs." + defaultToScheme + ".impl", defaultFsConf.getValue());
         setConf(conf);
         super.initialize(name, conf);
         if(this.pathMapper == null) {
-            this.pathMapper = new PathMapper(conf, defaultFromScheme, defaultToScheme);
+            this.pathMapper = new PathMapper(conf, defaultSchemePairsSchemeTranslation);
         }
         this.workingDirectory = new Path(name);
         this.uri = name;
     }
 
-    private Map.Entry<String, String> getDefaultFsConf(Configuration conf) {
+    private Map<String, String> getDefaultFsConf(Configuration conf) {
+        Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTERN);
+        Map<String, String> defaultConf = new HashMap<>();
         for (Map.Entry<String, String> hadoopConf : conf) {
-            if (hadoopConf.getKey().startsWith(DEFAULT_FS_CONF_PREFIX)) {
-                return hadoopConf;
+            String confKey = hadoopConf.getKey();
+            Matcher defaultConfKeyMatcher = pattern.matcher(confKey);
+            if (confKey.startsWith(DEFAULT_FS_CONF_PREFIX) && defaultConfKeyMatcher.find()) {
+                defaultConf.put(hadoopConf.getKey(), hadoopConf.getValue());
             }
         }
-        throw new IllegalArgumentException("Missing default file system configuration");
+        if(defaultConf.isEmpty()) {
+            throw new IllegalArgumentException("Missing default file system configuration");
+        }
+        return defaultConf;
     }
 
     /**
