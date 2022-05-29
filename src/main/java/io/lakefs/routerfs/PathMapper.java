@@ -51,8 +51,8 @@ public class PathMapper {
         loadMappingConfig(conf);
     }
 
-    private List<PathMapping> createDefaultMapping(List<DefaultSchemeTranslation> defaultMappings) {
-        return defaultMappings.stream()
+    private List<PathMapping> createDefaultMapping(List<DefaultSchemeTranslation> defaultSchemeTranslations) {
+        return defaultSchemeTranslations.stream()
                 .map(defaultSchemeTranslation -> {
                     MappingConfig srcMapping = new MappingConfig.MappingConfigBuilder()
                             .type(MappingConfigType.SOURCE)
