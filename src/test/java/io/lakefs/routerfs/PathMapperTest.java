@@ -3,6 +3,7 @@ package io.lakefs.routerfs;
 import io.lakefs.routerfs.dto.DefaultSchemeTranslation;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -151,6 +152,23 @@ public class PathMapperTest {
                             put("s3c://a.txt", "s3c-default://a.txt");
                 }}, null},
 
+                {"No default mapping fallback", new HashMap<String, String>() {{
+                    put("routerfs.mapping.s3a.1.replace", "s3a://bucket/foo/");
+                    put("routerfs.mapping.s3a.1.with", "lakefs://example-repo/b1/");
+                    put("routerfs.mapping.s3b.1.replace", "s3b://bucket/foo/");
+                    put("routerfs.mapping.s3b.1.with", "lakefs://example-repo/b2/");
+                    put("routerfs.mapping.s3c.1.replace", "s3c://bucket/foo/");
+                    put("routerfs.mapping.s3c.1.with", "lakefs://example-repo/b3/");
+                }}, Collections.singletonList(
+                        new DefaultSchemeTranslation("s3d", "s3d-default")
+                ),
+                        new HashMap<String, String>() {
+                            {
+                                put("s3a://bucket/bar/a.txt", null);
+                                put("s3b://bucket/bar/a.txt", null);
+                                put("s3c://bucket/bar/a.txt", null);
+                            }}, InvalidPathException.class},
+
                 {"Invalid mapping config index", new HashMap<String, String>() {{
                     put("routerfs.mapping.s3a.notAnInt.replace", "s3a://bucket");
                     put("routerfs.mapping.s3a.1.with", "lakefs://example-repo/b1");}},
@@ -186,6 +204,12 @@ public class PathMapperTest {
                     put("routerfs.mapping.lakefs.1.with", "lakefs://boo");}},
                         Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
                         null, InvalidPropertiesFormatException.class},
+
+                {"Empty schemes translation list", new HashMap<String, String>() {{
+                    put("routerfs.mapping.lakefs.1.replace", "s3a://bucket");
+                    put("routerfs.mapping.lakefs.1.with", "lakefs://boo");}},
+                        Collections.emptyList(),
+                        null, IllegalArgumentException.class},
         });
     }
 
