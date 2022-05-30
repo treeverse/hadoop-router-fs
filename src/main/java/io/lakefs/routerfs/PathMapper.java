@@ -1,6 +1,7 @@
 package io.lakefs.routerfs;
 
 import io.lakefs.routerfs.dto.DefaultSchemeTranslation;
+import io.lakefs.routerfs.dto.PathProperties;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
@@ -152,7 +153,7 @@ public class PathMapper {
      */
     private List<PathMapping> sortPathMappingsBySchemeAndIdx(List<PathMapping> pathMappings) {
         Comparator<PathMapping> bySchemeAndIndex = Comparator
-                .comparing(PathMapping::getFromScheme)
+                .comparing(PathMapping::getGroupScheme)
                 .thenComparing(PathMapping::getPriority);
 
         return pathMappings.stream()
@@ -196,12 +197,19 @@ public class PathMapper {
      * @param origPath the path to map
      * @return a mapped path
      */
-    public Path mapPath(Path origPath) {
-        PathMapping pathMapping = findAppropriatePathMapping(origPath);
+    public PathProperties mapPath(Path origPath) {
+        PathMapping pathMapping = findAppropriatePathMapping(origPath)
+                .orElseGet(() -> findDefaultPathMapping(origPath).orElse(null));
         if (pathMapping == null) {
-            throw new InvalidPathException(origPath.getName());
+            LOG.trace("Can't find a matching path mapping nor default path mapping for {}", origPath);
+            throw new InvalidPathException(origPath.toUri().toString());
         }
-        return convertPath(origPath, pathMapping);
+        Path dstPath = convertPath(origPath, pathMapping);
+        return PathProperties.builder()
+                .srcPrefix(pathMapping.getSrcConfig().getPrefix())
+                .dstPrefix(pathMapping.getDstConfig().getPrefix())
+                .path(dstPath)
+                .build();
     }
 
     /**
@@ -218,20 +226,16 @@ public class PathMapper {
         return new Path(convertedPath);
     }
 
-    private PathMapping findAppropriatePathMapping(Path path) {
-        Optional<PathMapping> appropriateMap = this.pathMappings.stream()
+    private Optional<PathMapping> findAppropriatePathMapping(Path path) {
+        return this.pathMappings.stream()
                 .filter(pm -> pm.isAppropriateMapping(path))
                 .findFirst();
-        return appropriateMap.orElseGet(() -> {
-            for(PathMapping defaultPathMapping: this.defaultMappings) {
-                if(defaultPathMapping.isAppropriateMapping(path)) {
-                    LOG.trace("Can't find a matching path mapping for {}, using default mapping: {}", path, defaultPathMapping);
-                    return defaultPathMapping;
-                }
-            }
-            LOG.trace("Can't find a matching path mapping nor default path mapping for {}", path);
-            return null;
-        });
+    }
+
+    private Optional<PathMapping> findDefaultPathMapping(Path path) {
+        return this.defaultMappings.stream()
+                .filter(defaultMapping -> path.toString().startsWith(defaultMapping.getGroupScheme()))
+                .findFirst();
     }
 
     /**
@@ -243,7 +247,7 @@ public class PathMapper {
         @Getter private final MappingConfig srcConfig;
         @Getter private final MappingConfig dstConfig;
         @Getter private int priority = -1;
-        @Getter private final String fromScheme;
+        @Getter private final String groupScheme;
 
         public PathMapping(MappingConfig srcPrefix, MappingConfig dstPrefix) {
             this(srcPrefix, dstPrefix, false);
@@ -252,7 +256,7 @@ public class PathMapper {
         public PathMapping(MappingConfig srcConfig, MappingConfig dstConfig, boolean defaultMapping) {
             this.srcConfig = srcConfig;
             this.dstConfig = dstConfig;
-            this.fromScheme = srcConfig.getGroupScheme();
+            this.groupScheme = srcConfig.getGroupScheme();
 
             if (!defaultMapping) {
                 if (!srcConfig.getGroupScheme().equals(dstConfig.getGroupScheme())) {
