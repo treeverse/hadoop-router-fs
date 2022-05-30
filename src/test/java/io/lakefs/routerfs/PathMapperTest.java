@@ -221,7 +221,7 @@ public class PathMapperTest {
         }
         prepareTest(mappingConfig);
         for (Map.Entry<String, String> pair : pathToExpected.entrySet()) {
-            Path actual = pathMapper.mapPath(new Path(pair.getKey()));
+            Path actual = pathMapper.mapPath(new Path(pair.getKey())).getPath();
             Assert.assertEquals(pair.getValue(), actual.toString());
         }
     }

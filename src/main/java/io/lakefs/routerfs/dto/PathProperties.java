@@ -2,11 +2,11 @@ package io.lakefs.routerfs.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Value;
+import lombok.Getter;
 import org.apache.hadoop.fs.Path;
 
 
-@Value
+@Getter
 @Builder
 @AllArgsConstructor
 public class PathProperties {
