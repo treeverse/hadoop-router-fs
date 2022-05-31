@@ -222,7 +222,7 @@ public class RouterFileSystem extends FileSystem {
         PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
         FileStatus[] fileStatusResults = fileSystemPathProperties.getFileSystem().listStatus(pathProperties.getPath());
         return Arrays.stream(fileStatusResults)
-                .map(fileStatus -> convertFileStatusToSrcPath(fileStatus, pathProperties))
+                .map(fileStatus -> switchFileStatusPathPrefix(fileStatus, pathProperties.getDstPrefix(), pathProperties.getSrcPrefix()))
                 .toArray(FileStatus[]::new);
     }
 
@@ -282,7 +282,7 @@ public class RouterFileSystem extends FileSystem {
         FileSystemPathProperties fileSystemPathProperties = generateFSPathProperties(f);
         PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
         FileStatus fileStatus = fileSystemPathProperties.getFileSystem().getFileStatus(pathProperties.getPath());
-        return convertFileStatusToSrcPath(fileStatus, pathProperties);
+        return switchFileStatusPathPrefix(fileStatus, pathProperties.getDstPrefix(), pathProperties.getSrcPrefix());
     }
 
     private FileSystemPathProperties generateFSPathProperties(Path p) throws IOException {
@@ -301,9 +301,12 @@ public class RouterFileSystem extends FileSystem {
         return p;
     }
 
-    private FileStatus convertFileStatusToSrcPath(FileStatus fileStatus, PathProperties pathProperties) {
+    private static FileStatus switchFileStatusPathPrefix(FileStatus fileStatus, String fromPrefix, String toPrefix) {
         String mappedUri = fileStatus.getPath().toString();
-        String srcUri = mappedUri.replaceFirst(pathProperties.getDstPrefix(), pathProperties.getSrcPrefix());
+        if(!mappedUri.startsWith(fromPrefix)) {
+            throw new InvalidPathException(String.format("Path %s doesn't start with 'fromPrefix' \"%s\"", mappedUri, fromPrefix));
+        }
+        String srcUri = mappedUri.replaceFirst(fromPrefix, toPrefix);
         Path path = new Path(srcUri);
         fileStatus.setPath(path);
         return fileStatus;

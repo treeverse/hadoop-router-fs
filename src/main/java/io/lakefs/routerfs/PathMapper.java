@@ -52,7 +52,7 @@ public class PathMapper {
         loadMappingConfig(conf);
     }
 
-    private List<PathMapping> createDefaultMapping(List<DefaultSchemeTranslation> defaultSchemeTranslations) {
+    private static List<PathMapping> createDefaultMapping(List<DefaultSchemeTranslation> defaultSchemeTranslations) {
         return defaultSchemeTranslations.stream()
                 .map(defaultSchemeTranslation -> {
                     MappingConfig srcMapping = new MappingConfig.MappingConfigBuilder()
@@ -134,14 +134,8 @@ public class PathMapper {
      * A method for troubleshooting purposes.
      */
     private void logLoadedMappings() {
-        LOG.debug("pathMappings: ");
-        for (PathMapping pm: this.pathMappings) {
-            LOG.debug(pm.toString());
-        }
-        if (!this.defaultMappings.isEmpty()) {
-            this.defaultMappings
-                    .forEach(pathMapping -> LOG.debug("defaultMapping: " + pathMapping));
-        }
+        this.pathMappings.forEach(pathMapping -> LOG.debug("pathMappings: {}", pathMapping));
+        this.defaultMappings.forEach(defaultMapping -> LOG.debug("defaultMapping: {}", defaultMapping));
     }
 
     /**
