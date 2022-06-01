@@ -45,7 +45,7 @@ public class PathMapper {
 
     public PathMapper(Configuration conf, @NonNull List<DefaultSchemeTranslation> defaultSchemeTranslations) throws IOException {
         this.pathMappings = new ArrayList<>();
-        if(defaultSchemeTranslations.isEmpty()) {
+        if (defaultSchemeTranslations.isEmpty()) {
             throw new IllegalArgumentException("Provided default filesystems mapping is empty");
         }
         this.defaultMappings = createDefaultMapping(defaultSchemeTranslations);
@@ -298,7 +298,7 @@ public class PathMapper {
         public MappingConfig(@Nonnull MappingConfigType type, @Nullable Integer priority, @Nonnull String groupScheme,
                              @Nonnull String prefix) {
             this.type = type;
-            if(priority != null) {
+            if (priority != null) {
                 this.priority = priority;
             }
             this.groupScheme = groupScheme;

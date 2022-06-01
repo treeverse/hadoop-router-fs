@@ -55,7 +55,7 @@ public class RouterFileSystem extends FileSystem {
         for(String defaultKey: defaultFsConfs.keySet()) {
             Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTERN);
             Matcher matcher = pattern.matcher(defaultKey);
-            if(matcher.find()) {
+            if (matcher.find()) {
                 String defaultFromScheme = matcher.group(DEFAULT_FS_SCHEME_REGEX_GROUP_NAME);
                 String defaultToScheme = defaultFromScheme + DEFAULT_FS_SCHEME_SUFFIX;
                 conf.set(String.format(FS_IMPL_KEY_FORMAT, defaultToScheme), defaultFsConfs.get(defaultKey));
@@ -64,7 +64,7 @@ public class RouterFileSystem extends FileSystem {
         }
         setConf(conf);
         super.initialize(name, conf);
-        if(this.pathMapper == null) {
+        if (this.pathMapper == null) {
             this.pathMapper = new PathMapper(conf, defaultSchemePairsSchemeTranslation);
         }
         this.workingDirectory = new Path(name);
@@ -86,7 +86,7 @@ public class RouterFileSystem extends FileSystem {
             }
             else {
                 Matcher implConfKeyMatcher = implMappingPattern.matcher(confKey);
-                if(implConfKeyMatcher.find()) {
+                if (implConfKeyMatcher.find()) {
                     String confValue = hadoopConf.getValue();
                     if (confValue.equals(this.getClass().getCanonicalName())) {
                         mappedImplSchemes.add(implConfKeyMatcher.group(DEFAULT_FS_SCHEME_REGEX_GROUP_NAME));
@@ -99,10 +99,10 @@ public class RouterFileSystem extends FileSystem {
     }
 
     private void validateDefaultMappings(Set<String> defaultSchemes, Set<String> mappedImplSchemes) {
-        if(defaultSchemes.isEmpty()) {
+        if (defaultSchemes.isEmpty()) {
             throw new IllegalArgumentException("No default filesystem configurations were specified");
         }
-        if(!defaultSchemes.containsAll(mappedImplSchemes)) {
+        if (!defaultSchemes.containsAll(mappedImplSchemes)) {
             throw new IllegalArgumentException("There are missing default mappings configurations");
         }
     }
@@ -175,7 +175,7 @@ public class RouterFileSystem extends FileSystem {
         FileSystemPathProperties dstFileSystemPathProperties = generateFSPathProperties(dst);
         URI srcFileSystemURI = srcFileSystemPathProperties.getFileSystem().getUri();
         URI dstFileSystemURI = dstFileSystemPathProperties.getFileSystem().getUri();
-        if(!srcFileSystemURI.equals(dstFileSystemURI)) {
+        if (!srcFileSystemURI.equals(dstFileSystemURI)) {
             LOG.warn("Cannot rename between different underlying FileSystems");
             return false;
         }
@@ -303,7 +303,7 @@ public class RouterFileSystem extends FileSystem {
 
     private static FileStatus switchFileStatusPathPrefix(FileStatus fileStatus, String fromPrefix, String toPrefix) {
         String mappedUri = fileStatus.getPath().toString();
-        if(!mappedUri.startsWith(fromPrefix)) {
+        if (!mappedUri.startsWith(fromPrefix)) {
             throw new InvalidPathException(String.format("Path %s doesn't start with 'fromPrefix' \"%s\"", mappedUri, fromPrefix));
         }
         String srcUri = mappedUri.replaceFirst(fromPrefix, toPrefix);
