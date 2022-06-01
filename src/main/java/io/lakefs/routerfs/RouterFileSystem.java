@@ -301,6 +301,18 @@ public class RouterFileSystem extends FileSystem {
         return p;
     }
 
+    /**
+     * This method translate a given FileStatus path's prefix to another prefix.
+     * This is used to translate paths to their original form.
+     * We need this functionality because RouterFileSystem has methods that return converted paths (from source uri to
+     * the configured mapping uri), like "listStatus", that are recursively traversed by it. This causes unwanted behavior
+     * as RouterFS might not be familiar with the converted paths. Therefore, RouterFileSystem will return the original
+     * path using this function.
+     * @param fileStatus the fileStatus that contain the path we're converting.
+     * @param fromPrefix the fileStatus path's prefix we wish to change.
+     * @param toPrefix the prefix we want to change to.
+     * @return a fileStatus with the changed path's prefix.
+     */
     private static FileStatus switchFileStatusPathPrefix(FileStatus fileStatus, String fromPrefix, String toPrefix) {
         String mappedUri = fileStatus.getPath().toString();
         if (!mappedUri.startsWith(fromPrefix)) {
