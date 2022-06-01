@@ -22,9 +22,9 @@ import java.util.regex.Pattern;
 public class RouterFileSystem extends FileSystem {
 
     private static final Logger LOG = LoggerFactory.getLogger(RouterFileSystem.class);
-    private static final String DEFAULT_FS_CONF_PATTERN = "^routerfs\\.default\\.fs\\.(?<fromScheme>[-a-z0-9_]*)";
-    private static final String DEFAULT_FS_IMPL_PATTERN = "^fs\\.(?<fromScheme>[-a-z0-9_]*)\\.impl";
-    private static final String DEFAULT_FS_SCHEME_REGEX_GROUP_NAME = "fromScheme";
+    private static final String DEFAULT_FS_SCHEME_REGEX_GROUP_NAME = "groupScheme";
+    private static final String DEFAULT_FS_CONF_PATTERN = String.format("^routerfs\\.default\\.fs\\.(?<%s>[-a-z0-9_]*)", DEFAULT_FS_SCHEME_REGEX_GROUP_NAME);
+    private static final String DEFAULT_FS_IMPL_PATTERN = String.format("^fs\\.(?<%s>[-a-z0-9_]*)\\.impl", DEFAULT_FS_SCHEME_REGEX_GROUP_NAME);
     private static final String DEFAULT_FS_SCHEME_SUFFIX = "-default";
     private static final String DEFAULT_FS_CONF_PREFIX = "routerfs.default.fs";
     private static final String FS_IMPL_KEY_FORMAT = "fs.%s.impl";
