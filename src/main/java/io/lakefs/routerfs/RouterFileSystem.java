@@ -1,6 +1,6 @@
 package io.lakefs.routerfs;
 
-import io.lakefs.routerfs.dto.DefaultSchemeTranslation;
+import io.lakefs.routerfs.dto.DefaultPrefixMapping;
 import io.lakefs.routerfs.dto.FileSystemPathProperties;
 import io.lakefs.routerfs.dto.PathProperties;
 import lombok.NoArgsConstructor;
@@ -51,7 +51,7 @@ public class RouterFileSystem extends FileSystem {
         // the corresponding default filesystem. e.g., the method converts a configuration of the form
         // routerfs.default.fs.s3a=S3AFileSystem into fs.s3a-default.impl=S3AFileSystem.
         Map<String, String> defaultFsConfs = getDefaultFsConf(conf);
-        List<DefaultSchemeTranslation> defaultSchemePairsSchemeTranslation = new ArrayList<>();
+        List<DefaultPrefixMapping> defaultSchemePairsSchemeTranslation = new ArrayList<>();
         for(String defaultKey: defaultFsConfs.keySet()) {
             Pattern pattern = Pattern.compile(DEFAULT_FS_CONF_PATTERN);
             Matcher matcher = pattern.matcher(defaultKey);
@@ -59,7 +59,7 @@ public class RouterFileSystem extends FileSystem {
                 String defaultFromScheme = matcher.group(DEFAULT_FS_SCHEME_REGEX_GROUP_NAME);
                 String defaultToScheme = defaultFromScheme + DEFAULT_FS_SCHEME_SUFFIX;
                 conf.set(String.format(FS_IMPL_KEY_FORMAT, defaultToScheme), defaultFsConfs.get(defaultKey));
-                defaultSchemePairsSchemeTranslation.add(new DefaultSchemeTranslation(defaultFromScheme, defaultToScheme));
+                defaultSchemePairsSchemeTranslation.add(new DefaultPrefixMapping(defaultFromScheme, defaultToScheme));
             }
         }
         setConf(conf);

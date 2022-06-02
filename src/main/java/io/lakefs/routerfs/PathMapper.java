@@ -1,6 +1,6 @@
 package io.lakefs.routerfs;
 
-import io.lakefs.routerfs.dto.DefaultSchemeTranslation;
+import io.lakefs.routerfs.dto.DefaultPrefixMapping;
 import io.lakefs.routerfs.dto.PathProperties;
 import lombok.Builder;
 import lombok.Getter;
@@ -43,28 +43,28 @@ public class PathMapper {
     private List<PathMapping> pathMappings;
     private final List<PathMapping> defaultMappings;
 
-    public PathMapper(Configuration conf, @NonNull List<DefaultSchemeTranslation> defaultSchemeTranslations) throws IOException {
+    public PathMapper(Configuration conf, @NonNull List<DefaultPrefixMapping> defaultPrefixMappings) throws IOException {
         this.pathMappings = new ArrayList<>();
-        if (defaultSchemeTranslations.isEmpty()) {
+        if (defaultPrefixMappings.isEmpty()) {
             throw new IllegalArgumentException("Provided default filesystems mapping is empty");
         }
-        this.defaultMappings = createDefaultMapping(defaultSchemeTranslations);
+        this.defaultMappings = createDefaultMapping(defaultPrefixMappings);
         loadMappingConfig(conf);
     }
 
-    private static List<PathMapping> createDefaultMapping(List<DefaultSchemeTranslation> defaultSchemeTranslations) {
-        return defaultSchemeTranslations.stream()
-                .map(defaultSchemeTranslation -> {
+    private static List<PathMapping> createDefaultMapping(List<DefaultPrefixMapping> defaultPrefixMappings) {
+        return defaultPrefixMappings.stream()
+                .map(defaultPrefixMapping -> {
                     MappingConfig srcMapping = new MappingConfig.MappingConfigBuilder()
                             .type(MappingConfigType.SOURCE)
-                            .groupScheme(defaultSchemeTranslation.getTranslateFromScheme())
-                            .prefix(defaultSchemeTranslation.getTranslateFromScheme() + URI_SCHEME_SEPARATOR)
+                            .groupScheme(defaultPrefixMapping.getFromScheme())
+                            .prefix(defaultPrefixMapping.getFromScheme() + URI_SCHEME_SEPARATOR)
                             .build();
 
                     MappingConfig dstMapping = new MappingConfig.MappingConfigBuilder()
                             .type(MappingConfigType.DEST)
-                            .groupScheme(defaultSchemeTranslation.getTranslateToScheme())
-                            .prefix(defaultSchemeTranslation.getTranslateToScheme() + URI_SCHEME_SEPARATOR)
+                            .groupScheme(defaultPrefixMapping.getToScheme())
+                            .prefix(defaultPrefixMapping.getToScheme() + URI_SCHEME_SEPARATOR)
                             .build();
                     return new PathMapping(srcMapping, dstMapping, true);
                 })

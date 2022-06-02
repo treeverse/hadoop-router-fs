@@ -1,6 +1,6 @@
 package io.lakefs.routerfs;
 
-import io.lakefs.routerfs.dto.DefaultSchemeTranslation;
+import io.lakefs.routerfs.dto.DefaultPrefixMapping;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.InvalidPathException;
@@ -25,19 +25,19 @@ public class PathMapperTest {
     private String testName;
     private Map<String, String> mappingConfig;
     private Map<String, String> pathToExpected;
-    private List<DefaultSchemeTranslation> defaultSchemeTranslations;
+    private List<DefaultPrefixMapping> defaultPrefixMappings;
     private Class<? extends Exception> expectedException;
 
     public PathMapperTest(String testName,
                           Map<String, String> mappingConfig,
-                          List<DefaultSchemeTranslation> defaultSchemeTranslations,
+                          List<DefaultPrefixMapping> defaultPrefixMappings,
                           Map<String, String> pathToExpected,
                           Class<? extends Exception> expectedException) {
         this.testName = testName;
         this.mappingConfig = mappingConfig;
         this.pathToExpected = pathToExpected;
         this.expectedException = expectedException;
-        this.defaultSchemeTranslations = defaultSchemeTranslations;
+        this.defaultPrefixMappings = defaultPrefixMappings;
     }
 
     @Rule
@@ -49,7 +49,7 @@ public class PathMapperTest {
                 {"Mapping config values are directories", new HashMap<String, String>() {{
                     put("routerfs.mapping.s3a.1.replace", "s3a://bucket/");
                     put("routerfs.mapping.s3a.1.with", "gcs://bar/");
-                }}, Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                }}, Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         new HashMap<String, String>() {{
                     put("s3a://bucket/foo/a", "gcs://bar/foo/a");
                 }}, null},
@@ -57,7 +57,7 @@ public class PathMapperTest {
                 {"Mapping config values are not directories", new HashMap<String, String>() {{
                     put("routerfs.mapping.s3a.1.replace", "s3a://bucket/team");
                     put("routerfs.mapping.s3a.1.with", "lakefs://example-repo/team");
-                }}, Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                }}, Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         new HashMap<String, String>() {{
                     put("s3a://bucket/team1/file1", "lakefs://example-repo/team1/file1");
                     put("s3a://bucket/team2/file2", "lakefs://example-repo/team2/file2");
@@ -66,7 +66,7 @@ public class PathMapperTest {
                 {"Only path prefix is replaced", new HashMap<String, String>() {{
                     put("routerfs.mapping.s3a.1.replace", "s3a://bucket/");
                     put("routerfs.mapping.s3a.1.with", "lakefs://example-repo/b1/");
-                }}, Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                }}, Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         new HashMap<String, String>() {{
                     put("s3a://bucket/bucket/a.txt", "lakefs://example-repo/b1/bucket/a.txt");
                 }}, null},
@@ -76,7 +76,7 @@ public class PathMapperTest {
                     put("routerfs.mapping.s3a.2.with", "lakefs://example-repo/b2/");
                     put("routerfs.mapping.s3a.1.replace", "s3a://bucket/");
                     put("routerfs.mapping.s3a.1.with", "lakefs://example-repo/b1/");
-                }}, Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                }}, Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         new HashMap<String, String>() {{
                     put("s3a://bucket/foo/a.txt", "lakefs://example-repo/b1/foo/a.txt");
                 }}, null},
@@ -86,7 +86,7 @@ public class PathMapperTest {
                     put("routerfs.mapping.s3a.1.with", "gcs://bucket1/");
                     put("routerfs.mapping.s3a.2.replace", "s3a://bucket2/");
                     put("routerfs.mapping.s3a.2.with", "lakefs://example-repo/b1/");
-                }}, Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                }}, Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         new HashMap<String, String>() {{
                     put("s3a://bucket1/foo/a.txt", "gcs://bucket1/foo/a.txt");
                     put("s3a://bucket2/b.txt", "lakefs://example-repo/b1/b.txt");
@@ -99,7 +99,7 @@ public class PathMapperTest {
                     put("routerfs.mapping.s3a.2.with", "lakefs://example-repo/b1/");
                     put("routerfs.mapping.s3a.1.replace", "s3a://bucket1/");
                     put("routerfs.mapping.s3a.1.with", "gcs://bucket1/");
-                }}, Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                }}, Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         new HashMap<String, String>() {{
                     put("s3a://bucket1/foo/a.txt", "gcs://bucket1/foo/a.txt");
                     put("s3a://bucket2/b.txt", "lakefs://example-repo/b1/b.txt");
@@ -109,7 +109,7 @@ public class PathMapperTest {
                 {"src mapping prefix is a URI scheme",  new HashMap<String, String>() {{
                     put("routerfs.mapping.gcs.1.replace", "gcs://");
                     put("routerfs.mapping.gcs.1.with", "s3a://bucket1/");
-                }}, Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                }}, Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         new HashMap<String, String>() {{
                     put("gcs://a.txt" , "s3a://bucket1/a.txt");
                 }}, null},
@@ -117,7 +117,7 @@ public class PathMapperTest {
                 {"dst mapping prefix is a URI scheme", new HashMap<String, String>() {{
                     put("routerfs.mapping.s3a.1.replace", "s3a://bucket/boo/");
                     put("routerfs.mapping.s3a.1.with", "gcs://");
-                }}, Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                }}, Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         new HashMap<String, String>() {{
                     put("s3a://bucket/boo/a.txt", "gcs://a.txt");
                 }}, null},
@@ -126,7 +126,7 @@ public class PathMapperTest {
                     put("routerfs.mapping.minio.1.replace", "minio://");
                     put("routerfs.mapping.minio.1.with", "gcs://");
                 }},
-                        Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default"))
+                        Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default"))
                         , new HashMap<String, String>() {{
                     put("minio://a.txt", "gcs://a.txt");
                 }}, null},
@@ -139,9 +139,9 @@ public class PathMapperTest {
                     put("routerfs.mapping.s3c.1.replace", "s3c://bucket/foo/");
                     put("routerfs.mapping.s3c.1.with", "lakefs://example-repo/b3/");
                 }}, Stream.of(
-                        new DefaultSchemeTranslation("s3a", "s3a-default"),
-                        new DefaultSchemeTranslation("s3b", "s3b-default"),
-                        new DefaultSchemeTranslation("s3c", "s3c-default")
+                        new DefaultPrefixMapping("s3a", "s3a-default"),
+                        new DefaultPrefixMapping("s3b", "s3b-default"),
+                        new DefaultPrefixMapping("s3c", "s3c-default")
                 ).collect(Collectors.toList()),
                         new HashMap<String, String>() {{
                             put("s3a://bucket/bar/a.txt", "s3a-default://bucket/bar/a.txt");
@@ -160,7 +160,7 @@ public class PathMapperTest {
                     put("routerfs.mapping.s3c.1.replace", "s3c://bucket/foo/");
                     put("routerfs.mapping.s3c.1.with", "lakefs://example-repo/b3/");
                 }}, Collections.singletonList(
-                        new DefaultSchemeTranslation("s3d", "s3d-default")
+                        new DefaultPrefixMapping("s3d", "s3d-default")
                 ),
                         new HashMap<String, String>() {
                             {
@@ -172,37 +172,37 @@ public class PathMapperTest {
                 {"Invalid mapping config index", new HashMap<String, String>() {{
                     put("routerfs.mapping.s3a.notAnInt.replace", "s3a://bucket");
                     put("routerfs.mapping.s3a.1.with", "lakefs://example-repo/b1");}},
-                        Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                        Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         null, InvalidPropertiesFormatException.class},
 
                 {"Invalid mapping config type", new HashMap<String, String>() {{
                     put("routerfs.mapping.s3a.1.notAMappingConfType", "s3a://bucket");
                     put("routerfs.mapping.s3a.1.with", "lakefs://example-repo/b1");}},
-                        Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                        Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         null, InvalidPropertiesFormatException.class},
 
                 {"Missing default defaultFromScheme", new HashMap<String, String>() {{
                     put("routerfs.mapping.s3a.1.replace", "s3a://bucket");
                     put("routerfs.mapping.s3a.1.with", "lakefs://example-repo/b1");}},
-                        Collections.singletonList(new DefaultSchemeTranslation(null, "s3a-default")),
+                        Collections.singletonList(new DefaultPrefixMapping(null, "s3a-default")),
                         null, NullPointerException.class},
 
                 {"Missing default defaultToScheme", new HashMap<String, String>() {{
                     put("routerfs.mapping.s3a.1.replace", "s3a://bucket");
                     put("routerfs.mapping.s3a.1.with", "lakefs://example-repo/b1");}},
-                        Collections.singletonList(new DefaultSchemeTranslation("s3a", null)),
+                        Collections.singletonList(new DefaultPrefixMapping("s3a", null)),
                         null, NullPointerException.class},
 
                 {"Invalid mapping config fs scheme", new HashMap<String, String>() {{
                     put("routerfs.mapping.#@.1.replace", "#@://bucket");
                     put("routerfs.mapping.#@.1.with", "s3a://boo");}},
-                        Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                        Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         null, InvalidPropertiesFormatException.class},
 
                 {"Invalid mapping source config", new HashMap<String, String>() {{
                     put("routerfs.mapping.lakefs.1.replace", "s3a://bucket");
                     put("routerfs.mapping.lakefs.1.with", "lakefs://boo");}},
-                        Collections.singletonList(new DefaultSchemeTranslation("s3a", "s3a-default")),
+                        Collections.singletonList(new DefaultPrefixMapping("s3a", "s3a-default")),
                         null, InvalidPropertiesFormatException.class},
 
                 {"Empty schemes translation list", new HashMap<String, String>() {{
@@ -231,6 +231,6 @@ public class PathMapperTest {
         for (Map.Entry<String, String> mc : mappingConfig.entrySet()) {
             conf.set(mc.getKey(), mc.getValue());
         }
-        pathMapper = new PathMapper(conf, defaultSchemeTranslations);
+        pathMapper = new PathMapper(conf, defaultPrefixMappings);
     }
 }

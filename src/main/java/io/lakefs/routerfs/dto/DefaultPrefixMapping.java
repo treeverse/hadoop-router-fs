@@ -5,7 +5,7 @@ import lombok.Value;
 
 @Value
 @AllArgsConstructor
-public class DefaultSchemeTranslation {
-    String translateFromScheme;
-    String translateToScheme;
+public class DefaultPrefixMapping {
+    String fromScheme;
+    String toScheme;
 }
