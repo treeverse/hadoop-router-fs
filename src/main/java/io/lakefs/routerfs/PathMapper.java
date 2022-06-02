@@ -1,7 +1,12 @@
 package io.lakefs.routerfs;
 
+import io.lakefs.routerfs.dto.DefaultPrefixMapping;
+import io.lakefs.routerfs.dto.PathProperties;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NonNull;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.InvalidPathException;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,20 +41,34 @@ public class PathMapper {
     }
 
     private List<PathMapping> pathMappings;
-    private final PathMapping defaultMapping;
+    private final List<PathMapping> defaultMappings;
 
-    public PathMapper(Configuration conf, String defaultFromScheme, String defaultToScheme) throws IOException {
-        Objects.requireNonNull(defaultFromScheme);
-        Objects.requireNonNull(defaultToScheme);
+    public PathMapper(Configuration conf, @NonNull List<DefaultPrefixMapping> defaultPrefixMappings) throws IOException {
         this.pathMappings = new ArrayList<>();
-        this.defaultMapping = createDefaultMapping(defaultFromScheme, defaultToScheme);
+        if (defaultPrefixMappings.isEmpty()) {
+            throw new IllegalArgumentException("Provided default filesystems mapping is empty");
+        }
+        this.defaultMappings = createDefaultMapping(defaultPrefixMappings);
         loadMappingConfig(conf);
     }
 
-    private PathMapping createDefaultMapping(String defaultFromScheme, String defaultToScheme) {
-        MappingConfig srcMapping = new MappingConfig(MappingConfigType.SOURCE, null, defaultFromScheme, defaultFromScheme + URI_SCHEME_SEPARATOR);
-        MappingConfig dstMapping = new MappingConfig(MappingConfigType.DEST, null, defaultToScheme, defaultToScheme + URI_SCHEME_SEPARATOR);
-        return new PathMapping(srcMapping, dstMapping, true);
+    private static List<PathMapping> createDefaultMapping(List<DefaultPrefixMapping> defaultPrefixMappings) {
+        return defaultPrefixMappings.stream()
+                .map(defaultPrefixMapping -> {
+                    MappingConfig srcMapping = new MappingConfig.MappingConfigBuilder()
+                            .type(MappingConfigType.SOURCE)
+                            .groupScheme(defaultPrefixMapping.getFromScheme())
+                            .prefix(defaultPrefixMapping.getFromScheme() + URI_SCHEME_SEPARATOR)
+                            .build();
+
+                    MappingConfig dstMapping = new MappingConfig.MappingConfigBuilder()
+                            .type(MappingConfigType.DEST)
+                            .groupScheme(defaultPrefixMapping.getToScheme())
+                            .prefix(defaultPrefixMapping.getToScheme() + URI_SCHEME_SEPARATOR)
+                            .build();
+                    return new PathMapping(srcMapping, dstMapping, true);
+                })
+                .collect(Collectors.toList());
     }
 
     private void loadMappingConfig(Configuration conf) throws InvalidPropertiesFormatException {
@@ -115,13 +134,8 @@ public class PathMapper {
      * A method for troubleshooting purposes.
      */
     private void logLoadedMappings() {
-        LOG.debug("pathMappings: ");
-        for (PathMapping pm: pathMappings) {
-            LOG.debug(pm.toString());
-        }
-        if (defaultMapping != null) {
-            LOG.debug("defaultMapping: " + defaultMapping);
-        }
+        this.pathMappings.forEach(pathMapping -> LOG.debug("pathMappings: {}", pathMapping));
+        this.defaultMappings.forEach(defaultMapping -> LOG.debug("defaultMapping: {}", defaultMapping));
     }
 
     /**
@@ -133,7 +147,7 @@ public class PathMapper {
      */
     private List<PathMapping> sortPathMappingsBySchemeAndIdx(List<PathMapping> pathMappings) {
         Comparator<PathMapping> bySchemeAndIndex = Comparator
-                .comparing(PathMapping::getFromScheme)
+                .comparing(PathMapping::getGroupScheme)
                 .thenComparing(PathMapping::getPriority);
 
         return pathMappings.stream()
@@ -177,13 +191,19 @@ public class PathMapper {
      * @param origPath the path to map
      * @return a mapped path
      */
-    public Path mapPath(Path origPath) {
-        PathMapping pathMapping = findAppropriatePathMapping(origPath);
+    public PathProperties mapPath(Path origPath) {
+        PathMapping pathMapping = findAppropriatePathMapping(origPath)
+                .orElseGet(() -> findDefaultPathMapping(origPath).orElse(null));
         if (pathMapping == null) {
-            LOG.trace("Can't find a matching path mapping for {}, using default mapping", origPath);
-            pathMapping = defaultMapping;
+            LOG.trace("Can't find a matching path mapping nor default path mapping for {}", origPath);
+            throw new InvalidPathException(origPath.toUri().toString());
         }
-        return convertPath(origPath, pathMapping);
+        Path dstPath = convertPath(origPath, pathMapping);
+        return PathProperties.builder()
+                .srcPrefix(pathMapping.getSrcConfig().getPrefix())
+                .dstPrefix(pathMapping.getDstConfig().getPrefix())
+                .path(dstPath)
+                .build();
     }
 
     /**
@@ -200,10 +220,16 @@ public class PathMapper {
         return new Path(convertedPath);
     }
 
-    private PathMapping findAppropriatePathMapping(Path path) {
-        Optional<PathMapping> appropriateMap = pathMappings.stream()
-                .filter(pm -> pm.isAppropriateMapping(path)).findFirst();
-        return appropriateMap.orElse(null);
+    private Optional<PathMapping> findAppropriatePathMapping(Path path) {
+        return this.pathMappings.stream()
+                .filter(pm -> pm.isAppropriateMapping(path))
+                .findFirst();
+    }
+
+    private Optional<PathMapping> findDefaultPathMapping(Path path) {
+        return this.defaultMappings.stream()
+                .filter(defaultMapping -> path.toString().startsWith(defaultMapping.getGroupScheme()))
+                .findFirst();
     }
 
     /**
@@ -215,7 +241,7 @@ public class PathMapper {
         @Getter private final MappingConfig srcConfig;
         @Getter private final MappingConfig dstConfig;
         @Getter private int priority = -1;
-        @Getter private final String fromScheme;
+        @Getter private final String groupScheme;
 
         public PathMapping(MappingConfig srcPrefix, MappingConfig dstPrefix) {
             this(srcPrefix, dstPrefix, false);
@@ -224,7 +250,7 @@ public class PathMapper {
         public PathMapping(MappingConfig srcConfig, MappingConfig dstConfig, boolean defaultMapping) {
             this.srcConfig = srcConfig;
             this.dstConfig = dstConfig;
-            this.fromScheme = srcConfig.getGroupScheme();
+            this.groupScheme = srcConfig.getGroupScheme();
 
             if (!defaultMapping) {
                 if (!srcConfig.getGroupScheme().equals(dstConfig.getGroupScheme())) {
@@ -262,6 +288,7 @@ public class PathMapper {
      * Mapping configuration form is: routerfs.mapping.${fromFsScheme}.${mappingIdx}.${replace/with}=prefix.
      */
     @Getter
+    @Builder
     private static class MappingConfig {
         private final MappingConfigType type;
         private int priority = -1;
@@ -271,7 +298,7 @@ public class PathMapper {
         public MappingConfig(@Nonnull MappingConfigType type, @Nullable Integer priority, @Nonnull String groupScheme,
                              @Nonnull String prefix) {
             this.type = type;
-            if(priority != null) {
+            if (priority != null) {
                 this.priority = priority;
             }
             this.groupScheme = groupScheme;

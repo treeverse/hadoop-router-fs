@@ -36,8 +36,10 @@
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
-        <!--The common Hadoop version for Spark 2.4.7 and 3.0.1, which lakeFS supports-->
-        <hadoop.version>2.7.7</hadoop.version>
+        <!--The Hadoop version should support per-bucket configurations required for RouterFS
+        Versions >= 2.8.0 - https://hadoop.apache.org/docs/r2.8.0/hadoop-aws/tools/hadoop-aws/index.html#S3A
+        -->
+        <hadoop.version>2.9.2</hadoop.version>
     </properties>
 
     <profiles>

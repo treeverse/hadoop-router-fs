@@ -1,13 +1,16 @@
 package io.lakefs.routerfs.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Value;
-import org.apache.hadoop.fs.FileSystem;
+import lombok.Builder;
+import lombok.Getter;
 import org.apache.hadoop.fs.Path;
 
-@Value
+
+@Getter
+@Builder
 @AllArgsConstructor
-public class FileSystemPathPair {
-    FileSystem fileSystem;
+public class PathProperties {
     Path path;
+    String srcPrefix;
+    String dstPrefix;
 }
