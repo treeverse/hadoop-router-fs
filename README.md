@@ -140,3 +140,7 @@ fs.s3a.secret.key=...
 ```
 the configurations that begin with `fs.s3a.bucket.repo` will be used when trying to access `lakefs://repo/<path>`.  
 All other `fs.s3a.<conf>` properties will be used for the general case.
+
+### Working example
+
+Please refer to the [sample app](./sample_app/README.md).
