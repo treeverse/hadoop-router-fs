@@ -128,7 +128,7 @@ routerfs.default.fs.s3a=S3AFileSystem
 fs.lakefs.impl=S3AFileSystem
 
 # The following configs will be used when `lakefs://repo/...` will be addressed
-fs.s3a.bucket.repo.endpoint=https://lakefs.service
+fs.s3a.bucket.repo.endpoint=https://lakefs.example.com
 fs.s3a.bucket.repo.access.key=AKIAlakefs12345EXAMPLE
 fs.s3a.bucket.repo.secret.key=abc/lakefs/1234567bPxRfiCYEXAMPLEKEY
 ...
