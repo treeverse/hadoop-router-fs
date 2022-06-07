@@ -52,10 +52,9 @@ configuration that matches the URI prefix, and transforms the URI according to t
 * Make sure your source prefix ends with a slash when needed.
 * Mapping configurations apply in-order, and it is up to you to create non-conflicting configurations.
 
-
 ### Default file system
 
-For each custom mapped scheme you should configure a default file system implementation in case no prefix matching will be found.  
+For each mapped scheme you should configure a default file system implementation in case mapping is found.  
 Add the following configuration for the schemes you configured RouteFS to handle.
 ```properties
 routerfs.default.fs.${fromFsScheme}=${the file system you used for this scheme without routerFS}
@@ -67,12 +66,12 @@ routerfs.default.fs.s3a=S3AFileSystem
 You are instructing RouterFS to use `S3AFileSystem` for any URI with `scheme=s3a` for which RouterFS did not find
 a mapping configuration.
 
-### When no mapping was found
+#### When no mapping was found
 
 In case RouterFS can't find a matching mapping configuration, it will make sure that it's handled by the [default
 file system](#default-file-system) for the URI scheme.
 
-### Example
+**Example**
 
 Given the following mapping configurations:
 ```properties 
@@ -130,10 +129,10 @@ fs.lakefs.impl=S3AFileSystem
 
 # The following configs will be used when `lakefs://repo/...` will be addressed
 fs.s3a.bucket.repo.endpoint=https://lakefs.service
-fs.s3a.bucket.repo.access.key=...
-fs.s3a.bucket.repo.secret.key=...
+fs.s3a.bucket.repo.access.key=AKIAlakefs12345EXAMPLE
+fs.s3a.bucket.repo.secret.key=abc/lakefs/1234567bPxRfiCYEXAMPLEKEY
 ...
-# The following configs will be used when any non-mapped s3a schemed URIs will be addressed
+# The following configs will be used when any non-mapped s3a URIs will be addressed
 fs.s3a.endpoint=https://s3.us-east-1.amazonaws.com
 fs.s3a.access.key=...
 fs.s3a.secret.key=...

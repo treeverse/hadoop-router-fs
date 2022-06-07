@@ -29,4 +29,4 @@ The app will be used to write a Parquet file to two separate servers: S3 bucket 
 
 ## Result
 
-After running the app you should notice that the same Parquet file was written to two different locations using a single mapping scheme.
+After running the app you should notice that the same Parquet file was written to two different locations (to the lakeFS server and directly to the configured S3 bucket) using a single mapping scheme.
