@@ -30,25 +30,27 @@ another Hadoop file system that executes it against the underlying object store.
 
 ### Configure Spark to use RouterFS
 
-You should instruct Spark to use RouterFS as the file system implementation for the URIs you would like to transform at runtime. To do that, 
-add the following property to your Spark configurations: 
+Instruct Spark to use RouterFS as the file system implementation for the URIs you would like to transform at runtime by adding the following property to your Spark configurations: 
 ```properties
-fs.${fromFsScheme}.impl=RouterFileSystem
+fs.${fromFsScheme}.impl=io.lakefs.routerfs.RouterFileSystem
 ```
 
-For example, by adding the `fs.s3a.impl=RouterFileSystem` you are instructing Spark to use RouterFS as the file system for any 
+For example, by adding the `fs.s3a.impl=io.lakefs.routerfs.RouterFileSystem` you are instructing Spark to use RouterFS as the file system for any 
 URI with `scheme=s3a`.
 
 ### Add custom mapping configurations
 
 RouterFS consumes your mapping configurations to understand which paths it needs to modify and how to modify them. It then 
 performs a simple prefix replacement accordingly.  
-Mapping configurations are Hadoop properties of the following form:
-`routerfs.mapping.${fromFsScheme}.${mappingIdx}.(replace|with)=${path-prefix}`  
+Mapping configurations are Hadoop properties of the form:
+```properties
+routerfs.mapping.${fromFsScheme}.${mappingIdx}.(replace|with)=${path-prefix}
+```  
 For a given URI, RouterFS scans the mapping configurations defined for the URI's scheme, searches for the first mapping
 configuration that matches the URI prefix, and transforms the URI according to the matching configuration.
 
 #### Notes about mapping configurations:
+
 * Make sure your source prefix ends with a slash when needed.
 * Mapping configurations apply in-order, and it is up to you to create non-conflicting configurations.
 
@@ -61,7 +63,7 @@ routerfs.default.fs.${fromFsScheme}=${the file system you used for this scheme w
 ```
 For example, by adding:
 ```properties
-routerfs.default.fs.s3a=S3AFileSystem
+routerfs.default.fs.s3a=org.apache.hadoop.fs.s3a.S3AFileSystem
 ```
 You are instructing RouterFS to use `S3AFileSystem` for any URI with `scheme=s3a` for which RouterFS did not find
 a mapping configuration.
@@ -75,11 +77,12 @@ file system](#default-file-system) for the URI scheme.
 
 Given the following mapping configurations:
 ```properties 
+fs.s3a.impl=io.lakefs.routerfs.RouterFileSystem
 routerfs.mapping.s3a.1.replace=s3a://bucket/dir1/ # mapping src
 routerfs.mapping.s3a.1.with=lakefs://repo/main/ # mapping dst
 routerfs.mapping.s3a.2.replace=s3a://bucket/dir2/ # mapping src
 routerfs.mapping.s3a.2.with=lakefs://example-repo/dev/ # mapping dst
-routerfs.default.fs.s3a=S3AFileSystem # default file system implementation for the `s3a` scheme
+routerfs.default.fs.s3a=org.apache.hadoop.fs.s3a.S3AFileSystem # default file system implementation for the `s3a` scheme
 ```
 
 * For the URI `s3a://bucket/dir1/foo.parquet`, RouterFS will perform the next steps:
@@ -95,11 +98,11 @@ routerfs.default.fs.s3a=S3AFileSystem # default file system implementation for t
 
 ### Configure File Systems Implementations
 
-The final configuration step is to instruct Spark what file system to use for each URI scheme. You should make sure that you 
+The final configuration step is to instruct Spark what file system to use for each URI scheme. Make sure to 
 add this configuration for any URI scheme you defined a mapping configuration for.
 For example, to instruct Spark to use `S3AFileSystem` for any URI with `scheme=lakefs`
 ```properties
-fs.lakefs.impl=S3AFileSystem
+fs.lakefs.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
 ```
 
 ## Usage
@@ -121,11 +124,12 @@ S3AFileSystem as their file system implementation. That means that the compiled 
 The per-bucket configurations treat the first part of the path (also called the "authority") as the bucket to which we configure the S3A file system property.  
 For example, for the following configurations:
 ```properties
+fs.s3a.impl=io.lakefs.routerfs.RouterFileSystem
 routerfs.mapping.s3a.1.replace=s3a://bucket/dir/
 routerfs.mapping.s3a.1.with=lakefs://repo/branch/
-routerfs.default.fs.s3a=S3AFileSystem
+routerfs.default.fs.s3a=org.apache.hadoop.fs.s3a.S3AFileSystem
 
-fs.lakefs.impl=S3AFileSystem
+fs.lakefs.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
 
 # The following configs will be used when URIs of the form `lakefs://repo/...` will be addressed
 fs.s3a.bucket.repo.endpoint=https://lakefs.example.com

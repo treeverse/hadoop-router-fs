@@ -6,7 +6,6 @@ class SparkClient:
         self.spark = SparkSession.builder \
             .master("local[*]") \
             .appName("Try RouterFS") \
-            .config('spark.sql.shuffle.partitions', '1') \
             .getOrCreate()
         self.dataset = None
 
