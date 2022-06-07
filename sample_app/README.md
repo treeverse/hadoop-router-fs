@@ -14,14 +14,14 @@ The app will be used to write a Parquet file to two separate servers: S3 bucket 
 
 #### [spark_client.py](spark_client.py)
 
-1. Configure your `lakefs_` and `aws_` properties to include correct information. Alternatively, set the `LAKEFS_` and `AWS_` environment variables as specified in the code.
-2. Set (or don't) the `repo_name`, `branch_name` and `path` variables (make sure that if `path` is set, it ends with a `/`).
-3. Set (or don't) the `replace_prefix` variable to reflect the mapped prefix. Alternatively, set the `S3A_REPLACE_PREFIX` environment variable as specified in the code. 
+1. Set the `lakefs_` and `aws_` variables in the code to reflect correct information. Alternatively, set the `LAKEFS_` and `AWS_` environment variables as specified in the code.
+2. Set (or don't) the `repo_name`, `branch_name` and `path` variables in the code (make sure that if `path` is set, it ends with a `/`).
+3. Set (or don't) the `replace_prefix` variable in the code to reflect the mapped prefix. Alternatively, set the `S3A_REPLACE_PREFIX` environment variable as specified in the code. 
 
 #### [main.py](main.py)
 
-1. Set the `s3a_replace_prefix` variable to reflect the mapped prefix. Make sure this is the same value of `replace_prefix` under the [spark_client](spark_client.py) file. Alternatively, set the `S3A_REPLACE_PREFIX` environment variable as specified in the code.
-2. Set the `s3_bucket_s3a_prefix` variable to reflect the S3 bucket namespace to which the Parquet file will be written. **This should be a valid and accessible S3 bucket prefix**.
+1. Set the `s3a_replace_prefix` variable in the code to reflect the mapped prefix. Make sure this is the same value of `replace_prefix` under the [spark_client](spark_client.py) file. Alternatively, set the `S3A_REPLACE_PREFIX` environment variable as specified in the code.
+2. Set the `s3_bucket_s3a_prefix` variable in the code to reflect the S3 bucket namespace to which the Parquet file will be written. **This should be a valid and accessible S3 bucket prefix**.
 
 ### Run
 
