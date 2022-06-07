@@ -83,15 +83,15 @@ routerfs.default.fs.s3a=S3AFileSystem # default file system implementation for t
 ```
 
 * For the URI `s3a://bucket/dir1/foo.parquet`, RouterFS will perform the next steps:
-  1. Scan all `routerfs` mapping configurations that has the `s3a` scheme in their key: `routerfs.mapping.s3a.${mappingIndex}.replace`.
-  2. Traverse over these configurations by the order of the priorities specified by `${mappingIdx}` and try to match a prefix of the given URI to the values of those configurations.
-  3. When it will reach the `s3a://bucket/dir1/` prefix, RouterFS will replace it with the destination mapping value: `lakefs://repo/main/` to create the resulting URI: `lakefs://repo/main/foo.parquet`.
+  1. Scan all `routerfs` mapping configurations include the `s3a` scheme in their key: `routerfs.mapping.s3a.${mappingIndex}.replace`.
+  2. Iterate the configurations by the order of the priorities specified by `${mappingIdx}` and try to match the URI prefix to the configurations values. The iteration stops once reaching the `s3a://bucket/dir1/` prefix that matches the URI `s3a://bucket/dir1/foo.parquet`.
+  3. Replace it with the destination mapping value: `lakefs://repo/main/` to create the desired URI: `lakefs://repo/main/foo.parquet`.
 
 
 * For the URI `s3a://bucket/dir3/bar.parquet`, RouterFS will perform the next steps:
-  1. As step 1 above.
-  2. As step 2 above.
-  3. When it will complete the scan and not find any matching prefixes, it will fall back to the [default file system](#default-file-system) implementation (`S3AFileSystem`) and will not amend any changes to the URI.
+  1. Scan all `routerfs` mapping configurations include the `s3a` scheme in their key: `routerfs.mapping.s3a.${mappingIndex}.replace`.
+  2. Iterate the configurations by the order of the priorities specified by `${mappingIdx}` and try to match the URI prefix to the configurations values. The iteration stops with no matching mapping.
+  3. Fall back to the [default file system](#default-file-system) implementation (`S3AFileSystem`) and leave the URI as it is.
 
 ### Configure File Systems Implementations
 
@@ -127,7 +127,7 @@ routerfs.default.fs.s3a=S3AFileSystem
 
 fs.lakefs.impl=S3AFileSystem
 
-# The following configs will be used when `lakefs://repo/...` will be addressed
+# The following configs will be used when URIs of the form `lakefs://repo/...` will be addressed
 fs.s3a.bucket.repo.endpoint=https://lakefs.example.com
 fs.s3a.bucket.repo.access.key=AKIAlakefs12345EXAMPLE
 fs.s3a.bucket.repo.secret.key=abc/lakefs/1234567bPxRfiCYEXAMPLEKEY
