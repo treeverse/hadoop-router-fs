@@ -25,7 +25,7 @@ The app will be used to write a Parquet file to two separate servers: S3 bucket 
 
 ### Run
 
-`spark-submit --packages "org.apache.hadoop:hadoop-aws:<you.hadoop.version>" main.py`
+`spark-submit --packages "org.apache.hadoop:hadoop-aws:<your.hadoop.version>" main.py`
 
 ## Result
 
