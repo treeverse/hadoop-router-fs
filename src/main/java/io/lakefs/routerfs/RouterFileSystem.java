@@ -236,7 +236,7 @@ public class RouterFileSystem extends FileSystem {
         PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
         logTranslatedPaths("listStatus", f, pathProperties.getPath());
         FileStatus[] fileStatusResults = fileSystemPathProperties.getFileSystem().listStatus(pathProperties.getPath());
-        LOG.debug("listStatus: retrieved the following file statuses: {}", (Object[]) fileStatusResults);
+        LOG.trace("listStatus: retrieved the following file statuses: {}", (Object[]) fileStatusResults);
         return Arrays.stream(fileStatusResults)
                 .map(fileStatus -> switchFileStatusPathPrefix(fileStatus, pathProperties.getDstPrefix(), pathProperties.getSrcPrefix()))
                 .toArray(FileStatus[]::new);
@@ -340,11 +340,11 @@ public class RouterFileSystem extends FileSystem {
         String srcUri = mappedUri.replaceFirst(fromPrefix, toPrefix);
         Path path = new Path(srcUri);
         fileStatus.setPath(path);
-        LOG.debug("switchFileStatusPathPrefix: replaced file status with path URI \"{}\" with path URI \"{}\"", mappedUri, srcUri);
+        LOG.trace("switchFileStatusPathPrefix: replaced file status with path URI \"{}\" with path URI \"{}\"", mappedUri, srcUri);
         return fileStatus;
     }
 
     private void logTranslatedPaths(String methodName, Path srcPath, Path dstPath) {
-        LOG.debug("{}: path {} converted to {}", methodName, srcPath, dstPath);
+        LOG.trace("{}: path {} converted to {}", methodName, srcPath, dstPath);
     }
 }

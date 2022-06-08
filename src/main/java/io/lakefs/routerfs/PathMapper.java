@@ -198,7 +198,7 @@ public class PathMapper {
             LOG.trace("mapPath: can't find a matching path mapping nor default path mapping for {}", origPath);
             throw new InvalidPathException(origPath.toUri().toString());
         }
-        LOG.debug("mapPath: found PathMapping {} corresponding to Path {}", pathMapping, origPath);
+        LOG.trace("mapPath: found PathMapping {} corresponding to Path {}", pathMapping, origPath);
         Path dstPath = convertPath(origPath, pathMapping);
         return PathProperties.builder()
                 .srcPrefix(pathMapping.getSrcConfig().getPrefix())
