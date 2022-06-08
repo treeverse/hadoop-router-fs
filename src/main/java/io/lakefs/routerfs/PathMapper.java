@@ -134,8 +134,10 @@ public class PathMapper {
      * A method for troubleshooting purposes.
      */
     private void logDebugLoadedMappings() {
-        this.pathMappings.forEach(pathMapping -> LOG.debug("pathMappings: {}", pathMapping));
-        this.defaultMappings.forEach(defaultMapping -> LOG.debug("defaultMapping: {}", defaultMapping));
+        if(LOG.isDebugEnabled()) {
+            this.pathMappings.forEach(pathMapping -> LOG.debug("pathMappings: {}", pathMapping));
+            this.defaultMappings.forEach(defaultMapping -> LOG.debug("defaultMapping: {}", defaultMapping));
+        }
     }
 
     /**
