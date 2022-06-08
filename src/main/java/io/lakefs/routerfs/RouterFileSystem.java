@@ -345,6 +345,6 @@ public class RouterFileSystem extends FileSystem {
     }
 
     private void logTranslatedPaths(String methodName, Path srcPath, Path dstPath) {
-        LOG.debug("{}: was called with path {}, and was converted to {}", methodName, srcPath, dstPath);
+        LOG.debug("{}: path {} converted to {}", methodName, srcPath, dstPath);
     }
 }
