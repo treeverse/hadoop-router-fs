@@ -66,6 +66,7 @@ public class PathMapper {
                             .groupScheme(defaultPrefixMapping.getToScheme())
                             .prefix(defaultPrefixMapping.getToScheme() + URI_SCHEME_SEPARATOR)
                             .build();
+
                     return new PathMapping(srcMapping, dstMapping, true);
                 })
                 .collect(Collectors.toList());
@@ -75,9 +76,7 @@ public class PathMapper {
         List<MappingConfig> mappingConfigurations = parseMappingConfig(conf);
         this.pathMappings = populatePathMappings(mappingConfigurations);
 
-        if (LOG.isDebugEnabled()) {
-            logLoadedMappings();
-        }
+        logDebugLoadedMappings();
     }
 
     /**
@@ -110,6 +109,7 @@ public class PathMapper {
                 }
                 PathMapping pathMapping = new PathMapping(configPair.get(srcIndex), configPair.get(dstIndex));
                 pathMappings.add(pathMapping);
+                LOG.debug("populatePathMapping: created new mapping \"{}\", using \"{}\"", pathMapping, mappingConfiguration);
             }
         }
         return sortPathMappingsBySchemeAndIdx(pathMappings);
@@ -124,7 +124,7 @@ public class PathMapper {
             if (hadoopConf.getKey().startsWith(MAPPING_CONFIG_PREFIX)) {
                 MappingConfig mappingConf = parseMappingConf(hadoopConf);
                 mappingConfig.add(mappingConf);
-                LOG.trace("Loaded and parsed mapping config with key:{} and value:{}", hadoopConf.getKey(), hadoopConf.getValue());
+                LOG.trace("parseMappingConfig: loaded and parsed mapping config with key:{} and value:{}", hadoopConf.getKey(), hadoopConf.getValue());
             }
         }
         return mappingConfig;
@@ -133,9 +133,11 @@ public class PathMapper {
     /**
      * A method for troubleshooting purposes.
      */
-    private void logLoadedMappings() {
-        this.pathMappings.forEach(pathMapping -> LOG.debug("pathMappings: {}", pathMapping));
-        this.defaultMappings.forEach(defaultMapping -> LOG.debug("defaultMapping: {}", defaultMapping));
+    private void logDebugLoadedMappings() {
+        if(LOG.isDebugEnabled()) {
+            this.pathMappings.forEach(pathMapping -> LOG.debug("pathMappings: {}", pathMapping));
+            this.defaultMappings.forEach(defaultMapping -> LOG.debug("defaultMapping: {}", defaultMapping));
+        }
     }
 
     /**
@@ -195,9 +197,10 @@ public class PathMapper {
         PathMapping pathMapping = findAppropriatePathMapping(origPath)
                 .orElseGet(() -> findDefaultPathMapping(origPath).orElse(null));
         if (pathMapping == null) {
-            LOG.trace("Can't find a matching path mapping nor default path mapping for {}", origPath);
+            LOG.trace("mapPath: can't find a matching path mapping nor default path mapping for {}", origPath);
             throw new InvalidPathException(origPath.toUri().toString());
         }
+        LOG.trace("mapPath: found PathMapping {} corresponding to Path {}", pathMapping, origPath);
         Path dstPath = convertPath(origPath, pathMapping);
         return PathProperties.builder()
                 .srcPrefix(pathMapping.getSrcConfig().getPrefix())
@@ -216,7 +219,7 @@ public class PathMapper {
     private Path convertPath(Path path, PathMapping pathMapping) {
         String str = path.toString();
         String convertedPath = str.replaceFirst(pathMapping.getSrcConfig().getPrefix(), pathMapping.getDstConfig().getPrefix());
-        LOG.trace("Converted {} to {} using path mapping {}", path, convertedPath,  pathMapping);
+        LOG.trace("convertPath: converted {} to {} using path mapping {}", path, convertedPath,  pathMapping);
         return new Path(convertedPath);
     }
 
@@ -254,12 +257,10 @@ public class PathMapper {
 
             if (!defaultMapping) {
                 if (!srcConfig.getGroupScheme().equals(dstConfig.getGroupScheme())) {
-                    LOG.error("src and dst schemes must match, cannot create PathMapping. src: {}, dst: {}", srcConfig.getGroupScheme(), dstConfig.getGroupScheme());
-                    throw new IllegalArgumentException();
+                    throw new IllegalArgumentException(String.format("src and dst schemes must match, cannot create PathMapping. src: %s, dst: %s", srcConfig.getGroupScheme(), dstConfig.getGroupScheme()));
                 }
                 if (srcConfig.getPriority() != dstConfig.getPriority()) {
-                    LOG.error("src and dst indices must match, cannot create PathMapping. src: {}, dst: {}", srcConfig.getPriority(), dstConfig.getPriority());
-                    throw new IllegalArgumentException();
+                    throw new IllegalArgumentException(String.format("src and dst indices must match, cannot create PathMapping. src: %s, dst: %s", srcConfig.getPriority(), dstConfig.getPriority()));
                 }
                 this.priority = srcConfig.getPriority();
             }

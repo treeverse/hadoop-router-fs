@@ -58,8 +58,11 @@ public class RouterFileSystem extends FileSystem {
             if (matcher.find()) {
                 String defaultFromScheme = matcher.group(DEFAULT_FS_SCHEME_REGEX_GROUP_NAME);
                 String defaultToScheme = defaultFromScheme + DEFAULT_FS_SCHEME_SUFFIX;
-                conf.set(String.format(FS_IMPL_KEY_FORMAT, defaultToScheme), defaultFsConfs.get(defaultKey));
+                String fsDefaultImplKey = String.format(FS_IMPL_KEY_FORMAT, defaultToScheme);
+                String fsDefaultImplValue = defaultFsConfs.get(defaultKey);
+                conf.set(fsDefaultImplKey, fsDefaultImplValue);
                 defaultSchemePairsSchemeTranslation.add(new DefaultPrefixMapping(defaultFromScheme, defaultToScheme));
+                LOG.debug("initialize: adding \"{} = {}\" default mapping to the configurations", fsDefaultImplKey, fsDefaultImplValue);
             }
         }
         setConf(conf);
@@ -68,6 +71,7 @@ public class RouterFileSystem extends FileSystem {
             this.pathMapper = new PathMapper(conf, defaultSchemePairsSchemeTranslation);
         }
         this.workingDirectory = new Path(name);
+        LOG.debug("initialize: setting working directory to {}", this.workingDirectory);
         this.uri = name;
     }
 
@@ -117,6 +121,7 @@ public class RouterFileSystem extends FileSystem {
     public FSDataInputStream open(Path f, int bufferSize) throws IOException {
         FileSystemPathProperties fileSystemPathProperties = generateFSPathProperties(f);
         PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
+        logTranslatedPaths("open", f, pathProperties.getPath());
         return fileSystemPathProperties.getFileSystem().open(pathProperties.getPath(), bufferSize);
     }
 
@@ -142,6 +147,7 @@ public class RouterFileSystem extends FileSystem {
                                      Progressable progress) throws IOException {
         FileSystemPathProperties fileSystemPathProperties = generateFSPathProperties(f);
         PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
+        logTranslatedPaths("create", f, pathProperties.getPath());
         return fileSystemPathProperties.getFileSystem().create(pathProperties.getPath(), permission, overwrite, bufferSize, replication, blockSize, progress);
     }
 
@@ -157,6 +163,7 @@ public class RouterFileSystem extends FileSystem {
     public FSDataOutputStream append(Path f, int bufferSize, Progressable progress) throws IOException {
         FileSystemPathProperties fileSystemPathProperties = generateFSPathProperties(f);
         PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
+        logTranslatedPaths("append", f, pathProperties.getPath());
         return fileSystemPathProperties.getFileSystem().append(pathProperties.getPath(), bufferSize, progress);
     }
 
@@ -175,8 +182,14 @@ public class RouterFileSystem extends FileSystem {
         FileSystemPathProperties dstFileSystemPathProperties = generateFSPathProperties(dst);
         URI srcFileSystemURI = srcFileSystemPathProperties.getFileSystem().getUri();
         URI dstFileSystemURI = dstFileSystemPathProperties.getFileSystem().getUri();
+        LOG.debug("rename: was called with source path {} and destination path {}, source translated path is {}, destination translated path is {} ",
+                src,
+                dst,
+                srcFileSystemPathProperties.getPathProperties().getPath(),
+                dstFileSystemPathProperties.getPathProperties().getPath()
+        );
         if (!srcFileSystemURI.equals(dstFileSystemURI)) {
-            LOG.warn("Cannot rename between different underlying FileSystems");
+            LOG.warn("rename: cannot rename between different underlying FileSystems");
             return false;
         }
         PathProperties srcPathProperties = srcFileSystemPathProperties.getPathProperties();
@@ -204,6 +217,7 @@ public class RouterFileSystem extends FileSystem {
             "fs2://blah/" then the recursive process will fail if the path points to "s3a://bucket/" or "s3a://bucket/dir1/"
          */
         PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
+        logTranslatedPaths("delete", f, pathProperties.getPath());
         return fileSystemPathProperties.getFileSystem().delete(pathProperties.getPath(), recursive);
     }
 
@@ -220,7 +234,9 @@ public class RouterFileSystem extends FileSystem {
     public FileStatus[] listStatus(Path f) throws FileNotFoundException, IOException {
         FileSystemPathProperties fileSystemPathProperties = generateFSPathProperties(f);
         PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
+        logTranslatedPaths("listStatus", f, pathProperties.getPath());
         FileStatus[] fileStatusResults = fileSystemPathProperties.getFileSystem().listStatus(pathProperties.getPath());
+        LOG.trace("listStatus: retrieved the following file statuses: {}", (Object[]) fileStatusResults);
         return Arrays.stream(fileStatusResults)
                 .map(fileStatus -> switchFileStatusPathPrefix(fileStatus, pathProperties.getDstPrefix(), pathProperties.getSrcPrefix()))
                 .toArray(FileStatus[]::new);
@@ -237,10 +253,11 @@ public class RouterFileSystem extends FileSystem {
         try {
             FileSystemPathProperties fileSystemPathProperties = generateFSPathProperties(new_dir);
             PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
+            logTranslatedPaths("setWorkingDirectory", new_dir, pathProperties.getPath());
             fileSystemPathProperties.getFileSystem().setWorkingDirectory(pathProperties.getPath());
             this.workingDirectory = new_dir;
         } catch (IOException e) {
-            LOG.error("Failed setting a working directory with exception:\n{}", e.getLocalizedMessage());
+            LOG.error("setWorkingDirectory: failed setting a working directory with exception:\n{}", e.getLocalizedMessage());
         }
     }
 
@@ -266,6 +283,7 @@ public class RouterFileSystem extends FileSystem {
     public boolean mkdirs(Path f, FsPermission permission) throws IOException {
         FileSystemPathProperties fileSystemPathProperties = generateFSPathProperties(f);
         PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
+        logTranslatedPaths("mkdirs", f, pathProperties.getPath());
         return fileSystemPathProperties.getFileSystem().mkdirs(pathProperties.getPath(), permission);
     }
 
@@ -281,6 +299,7 @@ public class RouterFileSystem extends FileSystem {
     public FileStatus getFileStatus(Path f) throws IOException {
         FileSystemPathProperties fileSystemPathProperties = generateFSPathProperties(f);
         PathProperties pathProperties = fileSystemPathProperties.getPathProperties();
+        logTranslatedPaths("getFileStatus", f, pathProperties.getPath());
         FileStatus fileStatus = fileSystemPathProperties.getFileSystem().getFileStatus(pathProperties.getPath());
         return switchFileStatusPathPrefix(fileStatus, pathProperties.getDstPrefix(), pathProperties.getSrcPrefix());
     }
@@ -321,6 +340,11 @@ public class RouterFileSystem extends FileSystem {
         String srcUri = mappedUri.replaceFirst(fromPrefix, toPrefix);
         Path path = new Path(srcUri);
         fileStatus.setPath(path);
+        LOG.trace("switchFileStatusPathPrefix: replaced file status with path URI \"{}\" with path URI \"{}\"", mappedUri, srcUri);
         return fileStatus;
+    }
+
+    private void logTranslatedPaths(String methodName, Path srcPath, Path dstPath) {
+        LOG.trace("{}: path {} converted to {}", methodName, srcPath, dstPath);
     }
 }
