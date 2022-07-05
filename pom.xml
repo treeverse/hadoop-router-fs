@@ -39,7 +39,7 @@
         <!--The Hadoop version should support per-bucket configurations required for RouterFS
         Versions >= 2.8.0 - https://hadoop.apache.org/docs/r2.8.0/hadoop-aws/tools/hadoop-aws/index.html#S3A
         -->
-        <hadoop.version>2.9.2</hadoop.version>
+        <hadoop.version>3.2.3</hadoop.version>
     </properties>
 
     <profiles>
